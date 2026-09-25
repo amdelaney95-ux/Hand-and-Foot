@@ -4,6 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
 <title>Hand &amp; Foot</title>
+<!-- Installable app ("Add to Home Screen"): offline support comes from sw.js, registered at the
+     bottom of the script. Harmless where those files don't exist (e.g. inside Claude). -->
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#123227">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Hand &amp; Foot">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
 <style>
@@ -102,6 +110,13 @@
   .field input:focus{ outline:2px solid var(--brass); }
   .or-divider{ display:flex; align-items:center; gap:10px; margin:18px 0; color:var(--cream-dim); font-size:.8rem; }
   .or-divider::before,.or-divider::after{ content:''; flex:1; height:1px; background:#6a4527; }
+  /* pass-and-play setup */
+  .local-list{ display:flex; flex-direction:column; gap:6px; margin-bottom:10px; }
+  .local-row{ display:flex; align-items:center; gap:8px; background:var(--felt-2); border:1px solid #2a5c46; border-radius:8px; padding:6px 8px; }
+  .local-seat{ font-family:'IBM Plex Mono',monospace; color:var(--brass); font-size:.8rem; width:1.2em; text-align:center; }
+  .local-name{ flex:1; font-weight:600; }
+  .toggle-row{ display:flex; align-items:center; gap:8px; font-size:.92rem; cursor:pointer; margin-top:6px; }
+  .toggle-row input{ width:18px; height:18px; accent-color:var(--brass); }
   /* ---------- Lobby ---------- */
   .lobby-top{ display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:18px; }
   .player-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px; margin:16px 0; }
@@ -942,6 +957,11 @@ function friendlyFirebaseError(e){
     return 'Anonymous sign-in is turned off. In the Firebase console: Authentication → Sign-in method → enable Anonymous.';
   if(code==='auth/unauthorized-domain')
     return `This site (${location.hostname}) isn't on Firebase's authorized domains list. Add it under Authentication → Settings → Authorized domains.`;
+  // Google Cloud API-key restrictions (FIREBASE_SETUP.md step 7) rejecting the sign-in:
+  if(code.startsWith('auth/requests-from-referer') || /API_KEY_HTTP_REFERRER_BLOCKED|referer.*blocked/i.test(msg))
+    return `The Firebase key's website restriction doesn't allow this site. In Google Cloud → Credentials → Browser key, set it to ${location.origin}/* (browsers only send the site name, not the full address).`;
+  if(code.startsWith('auth/requests-to-this-api') || /API_KEY_SERVICE_BLOCKED/i.test(msg))
+    return "The Firebase key's API restrictions block sign-in. In Google Cloud → Credentials → Browser key, make sure Identity Toolkit API and Token Service API are allowed.";
   if(code==='auth/invalid-api-key' || code.startsWith('auth/api-key'))
     return 'The Firebase apiKey in HF_CONFIG looks wrong. Re-copy the config from Project settings.';
   if(code==='auth/network-request-failed')
@@ -954,20 +974,28 @@ function friendlyFirebaseError(e){
 }
 
 function createFirebaseAdapter(config, loadModules){
-  let m = null, db = null;
+  let m = null, app = null, db = null;
   const roomRef = code => m.db.ref(db, `${FIREBASE_ROOT}/${code}`);
   const pack = s => ({json: JSON.stringify(s), rev: s.rev, updatedAt: s.updatedAt});
   const unpack = v => (v && typeof v.json==='string') ? JSON.parse(v.json) : null;
+  const offlineError = msg => Object.assign(new Error(msg), {offline:true});
   return {
     name:'firebase', label:'Firebase',
+    // Safe to call again after a failure (e.g. when the connection comes back): each step runs
+    // once. Calling initializeApp twice on one page would throw a duplicate-app error.
     async init(){
-      try{ m = await loadModules(); }
-      catch(e){ throw new Error("Couldn't load Firebase. Check your internet connection and refresh."); }
+      if(!m){
+        try{ m = await loadModules(); }
+        catch(e){ throw offlineError("Couldn't load Firebase. Check your internet connection."); }
+      }
       try{
-        const app = m.app.initializeApp(config);
-        db = m.db.getDatabase(app);
+        if(!app) app = m.app.initializeApp(config);
+        if(!db) db = m.db.getDatabase(app);
         await m.auth.signInAnonymously(m.auth.getAuth(app));
-      }catch(e){ throw new Error(friendlyFirebaseError(e)); }
+      }catch(e){
+        if(e && e.code==='auth/network-request-failed') throw offlineError(friendlyFirebaseError(e));
+        throw new Error(friendlyFirebaseError(e));
+      }
     },
     async get(code){
       const snap = await m.db.get(roomRef(code));
@@ -1014,6 +1042,48 @@ function createFirebaseAdapter(config, loadModules){
   };
 }
 
+/* Pass-and-play: the whole table on this one device, no network at all. Every move is saved to
+   this device's browser storage, so the game survives the screen locking, switching apps, or the
+   phone closing the app, all common over a long game on a phone. One saved game at a time.
+   If browser storage is unavailable (e.g. inside a Claude artifact) it falls back to memory, so
+   the game still plays; it just won't survive closing the page. */
+const LOCAL_GAME_KEY = 'hf_local_game_v1';
+function createLocalAdapter(){
+  let memory = null;
+  const clone = v => JSON.parse(JSON.stringify(v));
+  function peek(){
+    let stored = null;
+    try{ stored = JSON.parse(localStorage.getItem(LOCAL_GAME_KEY) || 'null'); }catch(e){}
+    const mem = memory ? clone(memory) : null;
+    if(stored && mem) return (mem.rev||0) > (stored.rev||0) ? mem : stored;
+    return stored || mem;
+  }
+  function write(state){
+    state.rev = (state.rev||0)+1;
+    state.updatedAt = Date.now();
+    memory = clone(state);
+    try{ localStorage.setItem(LOCAL_GAME_KEY, JSON.stringify(state)); }catch(e){}
+  }
+  return {
+    name:'local', label:'This device (pass-and-play)',
+    async init(){},
+    peek,
+    async get(){ return peek(); },
+    async create(state){ write(state); return {ok:true}; },   // replaces any previous local game
+    async update(code, mutator){
+      const s = peek();
+      if(!s) return {ok:false, notFound:true, reason:'The saved game is gone.'};
+      const r = mutator(s) || {ok:true};
+      if(!r.ok) return {ok:false, reason:r.reason||'Invalid move.'};
+      if(!r.noWrite) write(s);
+      return {ok:true, state:s};
+    },
+    subscribe(){ return ()=>{}; },   // nobody else writes to a local game
+    clear(){ memory = null; try{ localStorage.removeItem(LOCAL_GAME_KEY); }catch(e){} },
+  };
+}
+const localAdapter = createLocalAdapter();
+
 function claudeStoragePresent(){
   return typeof window!=='undefined' && !!window.storage
     && typeof window.storage.get==='function' && typeof window.storage.set==='function';
@@ -1046,37 +1116,62 @@ async function chooseBackend(){
 
 /* ---------------------------- Sync -------------------------------------- */
 let netState = null;             // last known shared game state
-let backend = null;              // the chosen adapter
-let backendStatus = 'connecting';// 'connecting' | 'ready' | 'error'
+let backend = null;              // the ONLINE backend (Firebase or Claude), once connected
+let gameBackend = null;          // the backend for the table that's open now: `backend`, or localAdapter
+let chosenAdapter = null;        // the online adapter picked at startup, kept so retries reuse it
+let backendStatus = 'connecting';// 'connecting' | 'ready' | 'offline' | 'error'
 let backendError = '';
 let unsubscribeRoom = null;
+const BACKEND_INIT_TIMEOUT_MS = 10000;
 
+function isLocal(){ return !!gameBackend && gameBackend.name==='local'; }
+/* Online, the host is whoever created the room. In pass-and-play whoever holds the device can
+   deal the next hand or start a new game. */
+function iAmHost(s){ return isLocal() || (!!s && s.hostId===me.id); }
+
+/* Connects the online backend. Never blocks pass-and-play, which needs no backend. If it fails
+   for lack of internet (status 'offline'), it retries automatically when the connection returns,
+   and a connection that comes up after the timeout still gets used. */
 async function initBackend(){
+  if(backendStatus==='ready') return;
   backendStatus = 'connecting'; render();
-  const choice = await chooseBackend();
-  if(choice.error){ backendStatus='error'; backendError=choice.error; render(); return; }
+  if(!chosenAdapter){
+    const choice = await chooseBackend();
+    if(choice.error){ backendStatus='error'; backendError=choice.error; render(); return; }
+    chosenAdapter = choice.adapter;
+  }
+  if(chosenAdapter.name==='firebase' && typeof navigator!=='undefined' && navigator.onLine===false){
+    backendStatus='offline'; backendError=''; render(); return;
+  }
+  const initP = chosenAdapter.init();
   try{
-    await choice.adapter.init();
-    backend = choice.adapter;
+    await Promise.race([initP, new Promise((_,rej)=>setTimeout(()=>rej(Object.assign(new Error('timed out'),{offline:true})), BACKEND_INIT_TIMEOUT_MS))]);
+    backend = chosenAdapter;
     backendStatus = 'ready';
   }catch(e){
-    backendStatus = 'error';
-    backendError = (e && e.message) || String(e);
+    backendStatus = (e && e.offline) ? 'offline' : 'error';
+    backendError = backendStatus==='error' ? ((e && e.message) || String(e)) : '';
+    initP.then(()=>{ if(backendStatus!=='ready'){ backend=chosenAdapter; backendStatus='ready'; render(); } }).catch(()=>{});
   }
   render();
 }
+if(typeof window!=='undefined') window.addEventListener('online', ()=>{ if(backendStatus==='offline') initBackend(); });
+
 function backendReady(){
   if(backendStatus==='ready') return true;
-  ui.error = backendStatus==='error' ? backendError : 'Still connecting. Try again in a moment.';
+  ui.error = backendStatus==='error' ? backendError
+    : backendStatus==='offline' ? "You're offline, so online rooms aren't available. Pass-and-play works without internet."
+    : 'Still connecting. Try again in a moment.';
   render();
   return false;
 }
 function describeSyncError(e){
-  return backend && backend.name==='firebase' ? friendlyFirebaseError(e) : `Storage error: ${(e && e.message) || e}`;
+  const b = gameBackend || backend;
+  return b && b.name==='firebase' ? friendlyFirebaseError(e) : `Storage error: ${(e && e.message) || e}`;
 }
 function startSync(code){
   stopSync();
-  unsubscribeRoom = backend.subscribe(code, remote=>{
+  unsubscribeRoom = gameBackend.subscribe(code, remote=>{
     if(!remote) return;
     // rev only ever increases, so an older snapshot (e.g. a slow poll that started before our
     // own write landed) can never roll the table back.
@@ -1128,6 +1223,13 @@ const ui = {
   meldOrder:null,        // custom order for YOUR OWN melds board (array of ranks). null = default ascending.
   meldReorderMode:false, // when true, tapping meld groups picks up/places them instead of normal use
   meldPickedRank:null,   // rank of the meld group currently "picked up" mid-reorder
+  // ---- pass-and-play ----
+  localNames:[],         // setup screen: player names in seating order
+  localNameInput:'',
+  localPrivacy:true,     // setup screen: show the "Pass to …" screen between turns
+  localPrefs:{},         // per-player personal view settings (hand/meld order), keyed by player id
+  revealedTurnKey:null,  // which turn the device holder has tapped "show my cards" for
+  localViewed:{round:null, ids:new Set()}, // who has had their first look (deal-in animation) this hand
 };
 
 function myTurn(){ return netState && netState.turnOrder[netState.turnIndex]===me.id; }
@@ -1135,6 +1237,7 @@ function clearStaging(){ ui.selected=new Set(); ui.stagedGroups=[]; ui.pickupAct
 
 /* ------------------------------ Actions --------------------------------- */
 function enterRoom(state, player){
+  gameBackend = backend;
   me.id = player.id; me.name = player.name;
   netState = state;
   ui.error = '';
@@ -1204,6 +1307,136 @@ async function actRejoinSession(){
 }
 function actForgetSession(){ clearSession(); render(); }
 
+/* ============================== PASS-AND-PLAY ==============================
+   Online, "me" is fixed: this device is one player. In pass-and-play the device IS whoever's
+   turn it is, so me.id follows the active player (syncLocalSeat, run at the top of every
+   render). Each player's personal view settings (hand and meld order) are stashed and restored
+   as the device changes hands, and anything tied to the previous player's turn is cleared.
+   With hiding on, the table is replaced by a "Pass to …" screen until the next player taps. */
+
+function localTurnKey(s){ return `${s.round}:${s.turnIndex}:${s.turnStartedAt||0}`; }
+
+function syncLocalSeat(){
+  if(!isLocal() || !netState || netState.phase!=='playing') return;
+  const s = netState;
+  const active = s.turnOrder[s.turnIndex];
+  if(!active || me.id===active) return;
+  if(me.id) ui.localPrefs[me.id] = {handOrder: ui.handOrder, meldOrder: ui.meldOrder};
+  const p = s.players.find(x=>x.id===active);
+  me.id = active; me.name = p ? p.name : '';
+  const prefs = ui.localPrefs[active] || {};
+  ui.handOrder = prefs.handOrder || null;
+  ui.meldOrder = prefs.meldOrder || null;
+  ui.reorderMode=false; ui.pickedCardId=null; ui.meldReorderMode=false; ui.meldPickedRank=null;
+  clearStaging();
+  ui.drawnThisTurnIds = new Set(); ui.lastDrawnCardId = null;
+  ui.drawAnimation = null; ui.redThreeAnimation = null; ui.dealAnimation = null; ui.scoreboardOpen = false;
+  ui.error = '';
+  if(s.localPrivacy===false) localFirstView();   // face-up: their cards are on screen right away
+}
+function localCoverUp(s){
+  return isLocal() && s.phase==='playing' && s.localPrivacy!==false && ui.revealedTurnKey!==localTurnKey(s);
+}
+function actRevealLocal(){
+  if(!netState) return;
+  ui.revealedTurnKey = localTurnKey(netState);
+  localFirstView();
+  render();
+}
+function localFirstView(){
+  const s = netState;
+  if(!s || s.phase!=='playing') return;
+  if(ui.localViewed.round!==s.round) ui.localViewed = {round:s.round, ids:new Set()};
+  if(ui.localViewed.ids.has(me.id)) return;
+  ui.localViewed.ids.add(me.id);
+  startDealInAnimation(s);
+}
+
+function enterLocalGame(state, resumed){
+  stopSync();
+  gameBackend = localAdapter;
+  netState = state;
+  ui.error = ''; ui.screen = 'table'; ui.scoreboardOpen = false;
+  ui.localPrefs = {};
+  ui.revealedTurnKey = null;
+  // Resuming mid-hand: everyone has already had their deal-in, so don't replay it (or re-cheer
+  // red 3s that were already celebrated).
+  ui.localViewed = resumed ? {round:state.round, ids:new Set(state.players.map(p=>p.id))} : {round:null, ids:new Set()};
+  clearStaging(); ui.drawnThisTurnIds = new Set();
+  ui.lastKnownActivePid = null; ui.lastKnownTotalRedThrees = null;   // no chimes for the resume itself
+  ui.lastSeenPhase = state.phase; ui.lastSeenRound = state.round;
+  me.id = null; me.name = '';
+  if(state.phase!=='playing'){
+    // Between hands or game over: no active turn to follow, so view as the last player to act.
+    const pid = state.turnOrder[state.turnIndex] || state.hostId;
+    me.id = pid; me.name = nameOf(state, pid);
+  }
+  render();
+}
+
+function actOpenLocalSetup(){
+  ui.screen = 'localSetup'; ui.error = '';
+  if(ui.localNames.length===0 && ui.nameInput.trim()) ui.localNames = [ui.nameInput.trim().slice(0,20)];
+  render();
+}
+function actBackToLanding(){ ui.screen = 'landing'; ui.error = ''; render(); }
+function localAddPlayer(){
+  const name = (ui.localNameInput||'').trim().slice(0,20);
+  if(!name) return;
+  if(ui.localNames.length>=6){ ui.error = '6 players max.'; render(); return; }
+  if(ui.localNames.some(n=>n.toLowerCase()===name.toLowerCase())){ ui.error = "Two players can't share a name."; render(); return; }
+  ui.localNames.push(name);
+  ui.localNameInput = ''; ui.error = '';
+  render();
+  const el = document.getElementById('localNameInput');
+  if(el) el.focus();
+}
+function localRemovePlayer(i){ ui.localNames.splice(i,1); ui.error=''; render(); }
+function localMovePlayerUp(i){
+  if(i<=0) return;
+  const n = ui.localNames;
+  [n[i-1], n[i]] = [n[i], n[i-1]];
+  render();
+}
+async function actStartLocalGame(){
+  if(ui.localNames.length<2){ ui.error = 'Add at least 2 players.'; render(); return; }
+  const saved = localAdapter.peek();
+  if(saved && saved.phase!=='gameOver' && !confirm('This replaces your saved pass-and-play game. Start a new one?')) return;
+  const players = ui.localNames.map(n=>({id:genPlayerId(), name:n}));
+  const s = newRoomState('LOCAL', players[0].id, players[0].name);
+  s.players = players;
+  s.localPrivacy = ui.localPrivacy!==false;
+  s.log = [];
+  s.turnOrder = players.map(p=>p.id);
+  dealGame(s);
+  s.phase = 'playing';
+  await localAdapter.create(s);
+  enterLocalGame(s, false);
+}
+function actResumeLocalGame(){
+  const s = localAdapter.peek();
+  if(!s){ ui.error = 'That saved game is gone.'; render(); return; }
+  enterLocalGame(s, true);
+}
+function actDiscardLocalGame(){
+  if(!confirm("Delete the saved pass-and-play game? This can't be undone.")) return;
+  localAdapter.clear();
+  render();
+}
+/* Back to the start screen. The game stays saved; "Resume" picks it up again. */
+function actExitLocalGame(){
+  gameBackend = null; netState = null;
+  me.id = null; me.name = '';
+  ui.screen = 'landing'; ui.scoreboardOpen = false; ui.error = '';
+  render();
+}
+function describeLocalSave(s){
+  const n = s.players.length;
+  if(s.phase==='gameOver') return `Finished game · ${n} players`;
+  if(s.phase==='roundEnd') return `Hand ${s.round} finished · ${n} players`;
+  return `Hand ${s.round}/4 · ${nameOf(s, s.turnOrder[s.turnIndex])}'s turn · ${n} players`;
+}
+
 async function actStartGame(){
   if(!netState || netState.hostId!==me.id) return;
   await pushState(s=>{
@@ -1228,10 +1461,10 @@ async function actStartGame(){
      Host actions (start, next hand, new game) happen outside the 'playing' phase, so they pass. */
 let pushInFlight = false;
 async function pushState(mutator){
-  if(!netState || !backend || pushInFlight) return;
+  if(!netState || !gameBackend || pushInFlight) return;
   pushInFlight = true; ui.busy = true;
   try{
-    const r = await backend.update(netState.code, s=>{
+    const r = await gameBackend.update(netState.code, s=>{
       if(s.phase==='playing' && s.turnOrder[s.turnIndex]!==me.id){
         return {ok:false, reason:"It's not your turn anymore — the table has moved on."};
       }
@@ -1390,25 +1623,32 @@ function triggerDrawSequence(before, redBefore){
     triggerDrawAnimation(newCards);
   }
 }
+/* Deal-in animation for the current viewer's hand, followed by a celebration of any red 3s they
+   were dealt. Online this runs at the moment of the deal. In pass-and-play it runs when each
+   player first takes the device that hand, since at the deal itself everyone but the first
+   player is still waiting and would miss it. */
+function startDealInAnimation(s){
+  const handSize = (s.hands[me.id]||[]).length || 13;
+  const totalMs = handSize*DEAL_STAGGER_MS + DEAL_POP_MS + 250;
+  ui.dealAnimation = {startedAt: Date.now(), totalMs, round: s.round};
+  setTimeout(()=>{
+    if(ui.dealAnimation && Date.now()-ui.dealAnimation.startedAt >= ui.dealAnimation.totalMs){ ui.dealAnimation=null; render(); }
+  }, totalMs + 100);
+
+  // Any red 3s dealt straight into the initial hand still deserve their moment — celebrate
+  // them once the deal-in stagger finishes, rather than overlapping two centered animations.
+  const dealtRedThrees = s.redThrees[me.id] || [];
+  if(dealtRedThrees.length > 0){
+    const cardsToShow = [...dealtRedThrees];
+    const viewer = me.id;
+    // Guard: in pass-and-play the device may already have changed hands by then.
+    setTimeout(()=>{ if(me.id===viewer) triggerRedThreeAnimation(cardsToShow); }, totalMs + 150);
+  }
+}
 function checkForDealTransition(s){
   if(!s) return;
   const freshDeal = s.phase==='playing' && (ui.lastSeenPhase!=='playing' || ui.lastSeenRound!==s.round);
-  if(freshDeal){
-    const handSize = (s.hands[me.id]||[]).length || 13;
-    const totalMs = handSize*DEAL_STAGGER_MS + DEAL_POP_MS + 250;
-    ui.dealAnimation = {startedAt: Date.now(), totalMs, round: s.round};
-    setTimeout(()=>{
-      if(ui.dealAnimation && Date.now()-ui.dealAnimation.startedAt >= ui.dealAnimation.totalMs){ ui.dealAnimation=null; render(); }
-    }, totalMs + 100);
-
-    // Any red 3s dealt straight into the initial hand still deserve their moment — celebrate
-    // them once the deal-in stagger finishes, rather than overlapping two centered animations.
-    const dealtRedThrees = s.redThrees[me.id] || [];
-    if(dealtRedThrees.length > 0){
-      const cardsToShow = [...dealtRedThrees];
-      setTimeout(()=>{ triggerRedThreeAnimation(cardsToShow); }, totalMs + 150);
-    }
-  }
+  if(freshDeal && !isLocal()) startDealInAnimation(s);
   ui.lastSeenPhase = s.phase;
   ui.lastSeenRound = s.round;
 }
@@ -1669,15 +1909,26 @@ async function actContinueRound(){
   await pushState(s=>{
     // Phase check: without it a second click (or a second host tab) would skip a whole hand.
     if(s.phase!=='roundEnd') return {ok:false, reason:'That hand has already moved on.'};
-    if(s.hostId!==me.id) return {ok:false, reason:'Only the host can deal the next hand.'};
+    if(!iAmHost(s)) return {ok:false, reason:'Only the host can deal the next hand.'};
     goToNextHandOrEnd(s); return {ok:true};
   });
   clearStaging();
 }
 async function actNewGame(){
+  if(isLocal()){
+    // Pass-and-play has no online lobby: go back to player setup with the same table.
+    if(!netState || netState.phase!=='gameOver') return;
+    ui.localNames = netState.players.map(p=>p.name);
+    ui.localPrivacy = netState.localPrivacy!==false;
+    localAdapter.clear();
+    gameBackend = null; netState = null; me.id = null;
+    ui.screen = 'localSetup'; ui.error = '';
+    render();
+    return;
+  }
   await pushState(s=>{
     if(s.phase!=='gameOver') return {ok:false, reason:'A new game has already been started.'};
-    if(s.hostId!==me.id) return {ok:false, reason:'Only the host can start a new game.'};
+    if(!iAmHost(s)) return {ok:false, reason:'Only the host can start a new game.'};
     resetToLobby(s); return {ok:true};
   });
   clearStaging();
@@ -1720,7 +1971,12 @@ function renderLanding(){
     <div class="landing-card panel">
       <h1>Hand &amp; Foot</h1>
       <p class="sub">A custom house-rules table for up to 6 players, from any device.</p>
+      ${(()=>{ const saved = localAdapter.peek(); return saved ? `
+        <button class="btn" style="width:100%;margin-bottom:4px" onclick="actResumeLocalGame()">Resume pass-and-play game</button>
+        <p class="footnote" style="margin:0 0 14px;text-align:center">${esc(describeLocalSave(saved))} · <a href="#" style="color:var(--cream-dim)" onclick="actDiscardLocalGame();return false;">delete it</a></p>
+        <div class="or-divider">or</div>` : ''; })()}
       ${backendStatus==='connecting'?`<div class="footnote" style="margin:0 0 10px">Connecting…</div>`:''}
+      ${backendStatus==='offline'?`<div class="footnote" style="margin:0 0 10px">You're offline, so online rooms are unavailable. Pass-and-play below works without internet.</div>`:''}
       ${backendStatus==='error'?`<div class="error-box">${esc(backendError)}</div>`:''}
       ${ui.error && ui.error!==backendError?`<div class="error-box">${esc(ui.error)}</div>`:''}
       ${(()=>{ const sess = backendStatus==='ready' ? loadSession() : null; return sess ? `
@@ -1742,14 +1998,69 @@ function renderLanding(){
       ${backend && backend.name==='claude'
         ? `<p class="footnote">Share the published artifact link so everyone joins the same table. Don't refresh mid-game unless reconnecting (rejoin with the same name to resume your seat).</p>`
         : `<p class="footnote">Refreshed or lost connection? This device remembers your seat, or rejoin with the same name and room code.</p>`}
+      <div class="or-divider">or play on one device</div>
+      <button class="btn secondary" style="width:100%" onclick="actOpenLocalSetup()">Pass-and-play on this device</button>
+      <p class="footnote">One phone or tablet handed around the table. Works without internet.</p>
       ${backend?`<p class="footnote" style="opacity:.7">Sync: ${esc(backend.label)}</p>`:''}
     </div>
   </div>`;
 }
 
+function renderLocalSetup(){
+  const names = ui.localNames;
+  return `
+  <div class="landing">
+    <div class="landing-card panel">
+      <h1>Pass-and-play</h1>
+      <p class="sub">One device, handed around the table. No internet needed.</p>
+      ${ui.error?`<div class="error-box">${esc(ui.error)}</div>`:''}
+      <div class="field">
+        <label>Players, in seating order (2–6)</label>
+        ${names.length ? `<div class="local-list">${names.map((n,i)=>`
+          <div class="local-row">
+            <span class="local-seat">${i+1}</span>
+            <span class="local-name">${esc(n)}${i===0?' <span class="pill-small">starts</span>':''}</span>
+            <button class="btn small secondary" onclick="localMovePlayerUp(${i})" ${i===0?'disabled':''} aria-label="Move ${esc(n)} up">↑</button>
+            <button class="btn small secondary" onclick="localRemovePlayer(${i})" aria-label="Remove ${esc(n)}">✕</button>
+          </div>`).join('')}</div>` : `<p class="footnote" style="margin:0 0 8px">No players yet.</p>`}
+        ${names.length<6 ? `<div style="display:flex;gap:8px">
+          <input id="localNameInput" type="text" maxlength="20" value="${esc(ui.localNameInput)}" placeholder="Add a player" autocomplete="off"
+            oninput="ui.localNameInput=this.value" onkeydown="if(event.key==='Enter'){ localAddPlayer(); }" style="flex:1">
+          <button class="btn secondary" onclick="localAddPlayer()">Add</button>
+        </div>` : ''}
+      </div>
+      <label class="toggle-row"><input type="checkbox" ${ui.localPrivacy?'checked':''} onchange="ui.localPrivacy=this.checked"> Hide cards between turns</label>
+      <p class="footnote" style="margin-top:4px">Shows a "Pass to …" screen so nobody sees the next player's hand. Turn off to play face-up.</p>
+      <button class="btn" style="width:100%;margin-top:10px" onclick="actStartLocalGame()" ${names.length<2?'disabled':''}>${names.length<2?'Add at least 2 players':`Start game (${names.length} players)`}</button>
+      <button class="btn secondary" style="width:100%;margin-top:8px" onclick="actBackToLanding()">Back</button>
+    </div>
+  </div>`;
+}
+
+/* Shown INSTEAD of the table between turns when hiding is on, so the next player's cards
+   aren't anywhere on the page, not merely covered up. */
+function renderPassCover(s){
+  const name = nameOf(s, s.turnOrder[s.turnIndex]);
+  return `
+  <div class="landing">
+    <div class="landing-card panel" style="text-align:center">
+      <span class="pill-small">Hand ${s.round}/4</span>
+      <h1 style="margin-top:14px">Pass to ${esc(name)}</h1>
+      <p class="sub">Everyone else, look away.</p>
+      <button class="btn" style="width:100%;padding:14px" onclick="actRevealLocal()">I'm ${esc(name)} — show my cards</button>
+      <div style="display:flex;gap:8px;justify-content:center;margin-top:16px">
+        <button class="btn small secondary" onclick="toggleScoreboard()">Scoreboard</button>
+        <button class="btn small secondary" onclick="actExitLocalGame()">Menu</button>
+      </div>
+      <p class="footnote">Menu saves the game. Resume it from the start screen.</p>
+    </div>
+  </div>
+  ${renderScoreboardModal(s)}`;
+}
+
 function renderLobby(){
   const s = netState;
-  const isHost = s.hostId===me.id;
+  const isHost = iAmHost(s);
   const decks = s.players.length+1;
   return `
   <div class="wrap">
@@ -1834,6 +2145,7 @@ function opponentTurnOrder(turnOrder, myId){
 
 function renderTable(){
   const s = netState;
+  if(localCoverUp(s)) return renderPassCover(s);
   const meIdx = s.turnOrder.indexOf(me.id);
   const activePid = s.turnOrder[s.turnIndex];
   const myHand = getDisplayHand(s.hands[me.id]||[]);
@@ -1962,7 +2274,9 @@ function renderTable(){
     <div class="grp mono" style="font-size:.85rem">
       <span>Your total: ${myScore}${myRank?` (${ordinal(myRank)})`:''}</span>
       <button class="btn small secondary" onclick="toggleScoreboard()">Scoreboard</button>
-      <span class="badge" style="padding:4px 10px">${esc(s.code)}</span>
+      ${isLocal()
+        ? `<span class="badge" style="padding:4px 10px">PASS &amp; PLAY</span><button class="btn small secondary" onclick="actExitLocalGame()">Menu</button>`
+        : `<span class="badge" style="padding:4px 10px">${esc(s.code)}</span>`}
     </div>
   </div>
   <div class="table-body">
@@ -2102,7 +2416,7 @@ function renderBreakdownTable(s, bd){
 }
 function renderRoundEndModal(){
   const s = netState;
-  const isHost = s.hostId===me.id;
+  const isHost = iAmHost(s);
   const bd = (s.roundBreakdowns||{})[s.round] || {};
   return `<div class="modal-bg"><div class="modal">
     <h2 style="margin-top:0;color:var(--brass-bright)">Hand ${s.round} complete</h2>
@@ -2126,7 +2440,7 @@ function renderRoundEndModal(){
 
 function renderGameOverModal(){
   const s = netState;
-  const isHost = s.hostId===me.id;
+  const isHost = iAmHost(s);
   const totals = s.turnOrder.map(pid=>({pid, total:(s.scores[pid]||[]).filter(v=>v!=null).reduce((a,b)=>a+b,0)}));
   totals.sort((a,b)=>b.total-a.total);
   return `<div class="modal-bg"><div class="modal">
@@ -2165,10 +2479,11 @@ function renderScoreboardModal(s){
 function render(){
   const app = document.getElementById('app');
   if(!netState){
-    ui.screen='landing';
-    app.innerHTML = renderLanding();
+    if(ui.screen!=='localSetup') ui.screen='landing';
+    app.innerHTML = ui.screen==='localSetup' ? renderLocalSetup() : renderLanding();
     return;
   }
+  syncLocalSeat();   // pass-and-play: become the active player (before the chime check below)
   checkForDealTransition(netState);
   checkForTurnStartChime(netState);
   checkForRedThreeChime(netState);
@@ -2190,6 +2505,16 @@ function render(){
 render();
 initBackend();
 setInterval(()=>{ if(netState && netState.phase==='playing'){ render(); } }, 1000);
+
+/* Offline support for the installed app. Only on a real https host: not inside Claude (where
+   sw.js doesn't exist and service workers aren't available), not from a file on disk. */
+try{
+  if('serviceWorker' in navigator && location.protocol==='https:' && !/claude/i.test(location.hostname)){
+    window.addEventListener('load', ()=>{
+      navigator.serviceWorker.register('sw.js').catch(e=>console.warn('Offline support unavailable:', e));
+    });
+  }
+}catch(e){}
 </script>
 </body>
 </html>
