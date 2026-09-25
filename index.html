@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <title>Hand &amp; Foot</title>
-<!-- GitHub Pages serves index.html at the site root; the game itself lives in handfoot.html so the
-     test tooling and the Claude artifact keep working unchanged. Carry over ?backend= etc. -->
-<script>location.replace('handfoot.html' + location.search + location.hash);</script>
-<meta http-equiv="refresh" content="0; url=handfoot.html">
+<!-- Repo-root entry point for GitHub Pages. The game lives in the handfoot-game/ folder,
+     so forward there (keeping any ?backend= parameter or #hash). -->
+<script>location.replace('handfoot-game/handfoot.html' + location.search + location.hash);</script>
+<meta http-equiv="refresh" content="0; url=handfoot-game/handfoot.html">
 </head>
-<body><a href="handfoot.html">Open Hand &amp; Foot</a></body>
+<body><a href="handfoot-game/handfoot.html">Open Hand &amp; Foot</a></body>
 </html>
