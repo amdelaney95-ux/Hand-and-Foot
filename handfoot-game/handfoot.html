@@ -1,0 +1,2195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>Hand &amp; Foot</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --felt:#123227;
+    --felt-2:#194433;
+    --wood:#4a2e1c;
+    --wood-dark:#311d10;
+    --cream:#f3ecdd;
+    --cream-dim:#d9cfb8;
+    --ink:#221a12;
+    --brass:#c9a54c;
+    --brass-bright:#e3c778;
+    --ember:#b3432b;
+    --sage:#7fa37a;
+    --danger:#c0523a;
+    font-size:16px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;background:var(--felt);}
+  body{
+    font-family:'Inter',sans-serif;
+    color:var(--cream);
+    background:
+      radial-gradient(circle at 20% -10%, var(--felt-2), transparent 60%),
+      radial-gradient(circle at 100% 110%, var(--felt-2), transparent 55%),
+      var(--felt);
+    min-height:100%;
+  }
+  h1,h2,h3,.display{ font-family:'Fraunces',serif; letter-spacing:.01em; }
+  .mono{ font-family:'IBM Plex Mono',monospace; }
+  #app{ min-height:100vh; display:flex; flex-direction:column; }
+  .wrap{ max-width:1180px; margin:0 auto; width:100%; padding:18px; }
+  button{ font-family:'Inter',sans-serif; cursor:pointer; border:none; border-radius:8px; }
+  input{ font-family:'Inter',sans-serif; }
+  .btn{
+    background:var(--brass); color:var(--wood-dark); font-weight:700; font-size:.95rem;
+    padding:10px 18px; border-radius:9px; box-shadow:0 2px 0 #8f7126; transition:transform .08s;
+  }
+  .btn:hover:not(:disabled){ background:var(--brass-bright); }
+  .btn:active:not(:disabled){ transform:translateY(1px); box-shadow:0 1px 0 #8f7126; }
+  .btn:disabled{ opacity:.4; cursor:not-allowed; }
+  .btn.secondary{ background:transparent; color:var(--cream); border:1.5px solid var(--brass); box-shadow:none; }
+  .btn.secondary:hover:not(:disabled){ background:rgba(201,165,76,.12); }
+  .btn.danger{ background:var(--ember); color:var(--cream); box-shadow:0 2px 0 #7c2c1c; }
+  .btn.small{ padding:6px 12px; font-size:.82rem; border-radius:7px; }
+  .card-back{
+    background-color:#16392c;
+    background-image:
+      repeating-linear-gradient(45deg, rgba(201,165,76,.32) 0, rgba(201,165,76,.32) 2px, transparent 2px, transparent 13px),
+      repeating-linear-gradient(-45deg, rgba(201,165,76,.32) 0, rgba(201,165,76,.32) 2px, transparent 2px, transparent 13px);
+    border:1.5px solid var(--brass);
+    position:relative;
+    overflow:hidden;
+  }
+  .card-back::before{
+    content:'';
+    position:absolute; inset:5px;
+    border:1px solid rgba(201,165,76,.65);
+    border-radius:3px;
+    pointer-events:none;
+  }
+  .card-back::after{
+    content:'';
+    position:absolute; top:50%; left:50%; width:15px; height:15px;
+    transform:translate(-50%,-50%) rotate(45deg);
+    background:rgba(201,165,76,.5);
+    border:1px solid rgba(201,165,76,.85);
+    pointer-events:none;
+  }
+  .foot-pile-visual{
+    background-color:#16392c;
+    border:1.5px solid var(--brass);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .foot-pile-visual svg{ width:56%; height:56%; }
+  .panel{
+    background:linear-gradient(180deg, var(--wood), var(--wood-dark));
+    border:1px solid #6a4527; border-radius:14px; padding:16px;
+    box-shadow:0 8px 24px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.05);
+  }
+  .badge{
+    display:inline-flex; align-items:center; gap:8px; background:var(--wood-dark);
+    border:1.5px solid var(--brass); border-radius:999px; padding:6px 14px; color:var(--brass-bright);
+    font-family:'IBM Plex Mono',monospace; font-weight:600; letter-spacing:.12em;
+  }
+  .error-box{ background:rgba(179,67,43,.18); border:1px solid var(--ember); color:#ffd8cc; padding:10px 14px; border-radius:8px; font-size:.9rem; margin:10px 0; }
+  /* ---------- Landing ---------- */
+  .landing{ flex:1; display:flex; align-items:center; justify-content:center; padding:24px; }
+  .landing-card{ max-width:460px; width:100%; }
+  .landing h1{ font-size:2.4rem; color:var(--brass-bright); margin:0 0 4px; }
+  .landing p.sub{ color:var(--cream-dim); margin:0 0 22px; font-size:.95rem; }
+  .field{ margin-bottom:14px; }
+  .field label{ display:block; font-size:.78rem; text-transform:uppercase; letter-spacing:.1em; color:var(--cream-dim); margin-bottom:6px; }
+  .field input{ width:100%; padding:11px 13px; border-radius:8px; border:1.5px solid #6a4527; background:var(--cream); color:var(--ink); font-size:1rem; }
+  .field input:focus{ outline:2px solid var(--brass); }
+  .or-divider{ display:flex; align-items:center; gap:10px; margin:18px 0; color:var(--cream-dim); font-size:.8rem; }
+  .or-divider::before,.or-divider::after{ content:''; flex:1; height:1px; background:#6a4527; }
+  /* ---------- Lobby ---------- */
+  .lobby-top{ display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:18px; }
+  .player-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px; margin:16px 0; }
+  .player-tile{ background:var(--felt-2); border:1px solid #2a5c46; border-radius:10px; padding:12px; text-align:center; }
+  .player-tile .seat{ font-family:'IBM Plex Mono',monospace; color:var(--brass); font-size:.72rem; }
+  .player-tile .pname{ font-weight:600; margin-top:2px; }
+  /* ---------- Table ---------- */
+  .topbar{ display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; padding:10px 16px; background:var(--wood-dark); border-bottom:2px solid var(--brass); }
+  .topbar .grp{ display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+  .turn-pill{ padding:6px 14px; border-radius:999px; font-weight:700; font-size:.85rem; }
+  .turn-pill.you{ background:var(--sage); color:var(--wood-dark); }
+  .turn-pill.other{ background:rgba(255,255,255,.08); color:var(--cream-dim); }
+  .table-body{ flex:1; display:flex; flex-direction:column; gap:14px; padding:14px 16px 100px; }
+  .opp-row{ display:flex; gap:10px; flex-wrap:wrap; }
+  .opp-chip{ background:var(--felt-2); border:1px solid #2a5c46; border-radius:10px; padding:8px 12px; font-size:.78rem; min-width:120px; }
+  .opp-chip .oname{ font-weight:700; margin-bottom:3px; }
+  /* "Next after you" accent. Deliberately sage green, not brass — brass is already spoken
+     for by the active-turn highlight, and the two must stay tellable apart at a glance.
+     Declared BEFORE .active so that when the next player is also the active player, the
+     brass border wins the cascade and the chip reads as "their turn right now". */
+  .opp-chip.next-up{ border-color:var(--sage); box-shadow:0 0 0 1px rgba(127,163,122,.35); }
+  .next-badge{
+    display:inline-flex; align-items:center; margin-left:6px;
+    background:rgba(127,163,122,.2); border:1px solid var(--sage); color:#cfe3cb;
+    font-size:.6rem; font-weight:700; letter-spacing:.06em;
+    padding:1px 6px; border-radius:999px; vertical-align:middle;
+  }
+  .opp-chip.active{ border-color:var(--brass); box-shadow:0 0 0 2px rgba(201,165,76,.4); }
+  /* Same sage as the NEXT badge, so the discard prompt and the chip it refers to read as one idea. */
+  .discard-to{ color:#cfe3cb; font-weight:700; }
+  .opp-chip .melds{ display:flex; gap:4px; flex-wrap:wrap; margin-top:5px; }
+  .floating-badge{
+    display:inline-flex; align-items:center; gap:3px; margin-left:6px;
+    background:rgba(120,175,215,.16); border:1px solid #6fa8c9; color:#addcf4;
+    border-radius:999px; padding:1px 9px; font-size:.68rem; font-weight:600;
+  }
+  .rankchip{ font-family:'IBM Plex Mono',monospace; font-size:.68rem; padding:2px 6px; border-radius:5px; background:var(--wood-dark); }
+  .rankchip.clean{ color:var(--brass-bright); }
+  .rankchip.dirty{ color:#d1b483; }
+  .rankchip.done{ box-shadow:0 0 0 1px var(--brass) inset; }
+  .rankchip.canasta-clean{ background:var(--ember); color:#fff1ea; border:1px solid #7c2c1c; font-weight:700; box-shadow:none; }
+  .rankchip.canasta-dirty{ background:#100b07; color:var(--cream-dim); border:1px solid #000; font-weight:700; box-shadow:none; }
+  .rankchip .cap-glyph{ font-size:.85em; margin-left:2px; }
+  .rankchip .wild-tag{ color:#a3823f; font-weight:700; margin-left:3px; }
+  .mid-row{ display:flex; gap:22px; align-items:center; justify-content:center; padding:14px 0; flex-wrap:wrap; }
+  .pile-stack{ text-align:center; }
+  .pile-label{ font-size:.72rem; text-transform:uppercase; letter-spacing:.12em; color:var(--cream-dim); margin-bottom:6px; }
+  .card{
+    width:56px; height:78px; border-radius:8px; background:var(--cream); color:var(--ink);
+    display:inline-flex; flex-direction:column; align-items:center; justify-content:center;
+    font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:1rem; position:relative;
+    border:1.5px solid #b7ab8c; box-shadow:0 2px 5px rgba(0,0,0,.3); user-select:none;
+  }
+  .card.red{ color:var(--ember); }
+  .card.wild{ color:#7a5a12; }
+  .card.selected{ outline:3px solid var(--brass); transform:translateY(-6px); box-shadow:0 8px 14px rgba(0,0,0,.4); }
+  .card.new-draw{ border:3px solid #ff5c48; box-shadow:0 0 10px 1px rgba(255,92,72,.65); }
+  .card.clickable{ cursor:pointer; transition:transform .08s; }
+  .card.clickable:hover{ transform:translateY(-4px); }
+  .card .suit{ font-size:1.3rem; margin-top:2px; }
+  .card.big{ width:64px; height:90px; font-size:1.1rem; }
+  .pile-count{ margin-top:6px; font-family:'IBM Plex Mono',monospace; font-size:.78rem; color:var(--cream-dim); }
+  .melds-board{ background:rgba(0,0,0,.18); border-radius:12px; padding:12px; }
+  .melds-board h3{ margin:0 0 8px; font-size:.95rem; color:var(--brass-bright); }
+  .meld-groups{ display:flex; gap:10px; flex-wrap:wrap; }
+  .meld-group{ background:var(--felt-2); border:1px solid #2a5c46; border-radius:10px; padding:8px; min-width:96px; }
+  .meld-group.locked{ border-color:var(--brass); }
+  .meld-group.reorderable{ cursor:pointer; }
+  .meld-group.picked{ outline:3px solid var(--brass); box-shadow:0 6px 12px rgba(0,0,0,.35); transform:translateY(-4px); }
+  .meld-group.drop-slot{ border:2px dashed var(--brass); background:transparent; display:flex; align-items:center; justify-content:center; color:var(--brass-bright); font-size:.7rem; cursor:pointer; min-height:64px; }
+  .meld-group .mg-head{ display:flex; justify-content:space-between; font-size:.72rem; color:var(--cream-dim); margin-bottom:6px; }
+  .meld-group .mg-cards{ display:flex; gap:3px; flex-wrap:wrap; }
+  .mini-card{ width:26px; height:36px; border-radius:4px; background:var(--cream); color:var(--ink); font-family:'IBM Plex Mono',monospace; font-size:.62rem; display:flex; align-items:center; justify-content:center; font-weight:700; }
+  .mini-card.red{ color:var(--ember); } .mini-card.wild{ color:#7a5a12; }
+  .mini-card.red3{ border:1.5px solid var(--brass); box-shadow:0 0 5px rgba(201,165,76,.55); }
+  .red3-section{ background:linear-gradient(135deg, rgba(201,165,76,.10), rgba(179,67,43,.10)); border:1px solid var(--brass); border-radius:12px; padding:10px 14px; display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+  .red3-section h3{ margin:0; font-size:.85rem; color:var(--brass-bright); white-space:nowrap; }
+  .red3-total{ font-family:'IBM Plex Mono',monospace; font-size:.8rem; color:var(--brass-bright); white-space:nowrap; margin-left:auto; }
+  .red3-card{ width:44px; height:60px; border-radius:7px; background:var(--cream); color:var(--ember); font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:.85rem; display:flex; flex-direction:column; align-items:center; justify-content:center; border:2px solid var(--brass); box-shadow:0 0 8px rgba(201,165,76,.6); }
+  .red3-card .suit{ font-size:1.1rem; }
+  .hand-area{ background:rgba(0,0,0,.22); border-radius:14px; padding:14px; }
+  .hand-row{ display:flex; gap:6px; flex-wrap:wrap; }
+  .action-bar{ position:sticky; bottom:0; background:var(--wood-dark); border-top:2px solid var(--brass); padding:12px 16px; display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+  .stage-panel{ background:rgba(0,0,0,.25); border:1px dashed var(--brass); border-radius:10px; padding:10px; margin-top:10px; }
+  .stage-panel .stg-row{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:6px; }
+  .log-box{ max-height:120px; overflow-y:auto; background:rgba(0,0,0,.22); border-radius:10px; padding:8px 12px; font-size:.78rem; color:var(--cream-dim); }
+  .log-box div{ padding:2px 0; border-bottom:1px solid rgba(255,255,255,.05); }
+  .modal-bg{ position:fixed; inset:0; background:rgba(10,15,12,.72); display:flex; align-items:center; justify-content:center; padding:20px; z-index:50; }
+  .modal{ background:var(--wood); border:1px solid var(--brass); border-radius:14px; padding:22px; max-width:560px; width:100%; max-height:86vh; overflow-y:auto; }
+  table.score-table{ width:100%; border-collapse:collapse; margin:12px 0; font-size:.88rem; }
+  table.score-table th, table.score-table td{ padding:6px 8px; text-align:right; border-bottom:1px solid #6a4527; }
+  table.score-table th:first-child, table.score-table td:first-child{ text-align:left; }
+  .pill-small{ font-size:.68rem; padding:2px 8px; border-radius:999px; background:var(--felt-2); color:var(--cream-dim); }
+  .footnote{ font-size:.72rem; color:var(--cream-dim); margin-top:8px; }
+  .flex-between{ display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; }
+  /* ---- Draw / deal animations (purely decorative, click to dismiss) ---- */
+  @keyframes drawPop {
+    0%   { transform: translate(-50%,-50%) scale(0.5) translateY(20px); opacity: 0; }
+    18%  { transform: translate(-50%,-50%) scale(1.06) translateY(0); opacity: 1; }
+    28%  { transform: translate(-50%,-50%) scale(1) translateY(0); opacity: 1; }
+    82%  { transform: translate(-50%,-50%) scale(1) translateY(0); opacity: 1; }
+    100% { transform: translate(-50%,-50%) scale(0.94) translateY(-10px); opacity: 0; }
+  }
+  .draw-overlay{
+    position:fixed; top:38%; left:50%; z-index:40; cursor:pointer;
+    display:flex; flex-direction:column; align-items:center; gap:10px;
+    animation: drawPop 1.5s ease both;
+  }
+  .draw-overlay-label{ font-family:'Fraunces',serif; font-size:1rem; color:var(--brass-bright); background:rgba(20,30,25,.85); padding:4px 16px; border-radius:999px; border:1px solid var(--brass); }
+  @keyframes handCardDeal {
+    0%   { transform: scale(0.3) translateY(26px) rotate(-6deg); opacity:0; }
+    70%  { transform: scale(1.07) translateY(0) rotate(1deg); opacity:1; }
+    100% { transform: scale(1) translateY(0) rotate(0deg); opacity:1; }
+  }
+  .card.deal-in{ animation: handCardDeal .38s ease both; }
+  @keyframes dealBannerFade {
+    0%,70% { opacity:1; }
+    100% { opacity:0; visibility:hidden; }
+  }
+  .deal-banner{
+    position:fixed; top:64px; left:50%; transform:translateX(-50%); z-index:38; pointer-events:none;
+    background:rgba(20,30,25,.85); border:1px solid var(--brass); border-radius:999px;
+    padding:6px 18px; font-family:'Fraunces',serif; color:var(--brass-bright); font-size:.9rem;
+  }
+  @keyframes sparkleTwinkle {
+    0%   { opacity:0; transform: scale(0) rotate(0deg); }
+    30%  { opacity:1; transform: scale(1.2) rotate(90deg); }
+    60%  { opacity:1; transform: scale(0.9) rotate(150deg); }
+    100% { opacity:0; transform: scale(0.4) rotate(220deg); }
+  }
+  .sparkle{
+    position:absolute; left:50%; top:50%; font-size:1.15rem; color:var(--brass-bright);
+    animation: sparkleTwinkle 1.5s ease-out both; pointer-events:none;
+    text-shadow:0 0 6px rgba(201,165,76,.85);
+  }
+  @keyframes red3Pulse{ 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.08); } }
+  .red3-card-wrap{ position:relative; display:inline-block; animation: red3Pulse .6s ease-in-out infinite; }
+  .red3-celebrate-label{
+    font-family:'Fraunces',serif; font-size:1.05rem; color:var(--brass-bright);
+    background:rgba(20,30,25,.85); padding:5px 18px; border-radius:999px; border:1px solid var(--brass);
+    margin-bottom:14px; text-align:center;
+  }
+  .red3-celebrate-stage{ display:flex; gap:16px; justify-content:center; }
+  @media (max-width:640px){
+    .card{ width:46px; height:64px; font-size:.82rem; }
+    .card .suit{ font-size:1.05rem; }
+    .mid-row{ gap:12px; }
+    .landing h1{ font-size:1.9rem; }
+  }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+/* =========================================================================
+   HAND & FOOT — custom house-rules engine + cross-device play.
+   One file, several places to run it — pick with HF_CONFIG.backend below.
+   ========================================================================= */
+
+/* ============================== SETTINGS ==================================
+   backend   'auto'     Claude storage when running as a Claude artifact,
+                        otherwise Firebase (if configured below). Default.
+             'claude'   Force Claude artifact storage.
+             'firebase' Force Firebase.
+             A URL parameter overrides this for one visit: handfoot.html?backend=firebase
+
+   firebase  Paste the config from Firebase console -> Project settings -> Your apps.
+             See FIREBASE_SETUP.md. These values are safe to publish on GitHub: a Firebase
+             web config only identifies the project. What protects the data is the database
+             rules, not the secrecy of these keys.
+   ========================================================================== */
+const HF_CONFIG = {
+  backend: 'auto',
+  firebase: {
+    apiKey: 'AIzaSyBmmof5ttfruKd0Z_JqizRIYoWPlcZJktY',
+    authDomain: 'hand-and-foot-de023.firebaseapp.com',
+    databaseURL: 'https://hand-and-foot-de023-default-rtdb.firebaseio.com',
+    projectId: 'hand-and-foot-de023',
+    appId: '1:1053390664403:web:9781978f6c0159c5bb9a26',
+  },
+};
+
+/* ---------------------------- Card helpers ---------------------------- */
+const RANKS = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
+const SUITS = ['♠','♥','♦','♣'];
+const RED_SUITS = ['♥','♦'];
+const ROUND_THRESHOLDS = [50,90,120,150];
+const RANK_ORDER = {'3':0,'4':1,'5':2,'6':3,'7':4,'8':5,'9':6,'10':7,'J':8,'Q':9,'K':10,'A':11,'2':12,'JOKER':13};
+/* Simple original footprint icon for the foot pile — a plain sole + toes shape, not based
+   on any particular product's artwork. */
+const FOOT_ICON_SVG = `<svg viewBox="0 0 40 60" xmlns="http://www.w3.org/2000/svg">
+  <ellipse cx="19" cy="39" rx="13" ry="19" fill="var(--brass-bright)"/>
+  <circle cx="9" cy="11" r="4.3" fill="var(--brass-bright)"/>
+  <circle cx="17" cy="6" r="4.8" fill="var(--brass-bright)"/>
+  <circle cx="25" cy="7" r="4.3" fill="var(--brass-bright)"/>
+  <circle cx="32" cy="11" r="3.8" fill="var(--brass-bright)"/>
+  <circle cx="37" cy="17" r="3.1" fill="var(--brass-bright)"/>
+</svg>`;
+
+function isWild(c){ return c.rank==='2' || c.rank==='JOKER'; }
+function isRedThree(c){ return c.rank==='3' && RED_SUITS.includes(c.suit); }
+function isBlackThree(c){ return c.rank==='3' && c.suit && !RED_SUITS.includes(c.suit); }
+function cardPointValue(c){
+  if(c.rank==='JOKER') return 50;
+  if(c.rank==='A' || c.rank==='2') return 20;
+  if(['8','9','10','J','Q','K'].includes(c.rank)) return 10;
+  return 5;
+}
+function cardLabel(c){ return c.rank==='JOKER' ? 'JKR' : (c.rank + (c.suit||'')); }
+function cardColorClass(c){
+  if(c.rank==='JOKER') return 'wild';
+  if(c.rank==='2') return 'wild';
+  if(RED_SUITS.includes(c.suit)) return 'red';
+  return '';
+}
+function esc(s){ return String(s).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+
+function buildDeck(numDecks){
+  let cards = []; let n=0;
+  for(let d=0; d<numDecks; d++){
+    for(const s of SUITS){ for(const r of RANKS){ cards.push({id:'c'+(n++), rank:r, suit:s}); } }
+    cards.push({id:'c'+(n++), rank:'JOKER', suit:null});
+    cards.push({id:'c'+(n++), rank:'JOKER', suit:null});
+  }
+  return cards;
+}
+function shuffle(arr){
+  for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; }
+  return arr;
+}
+function sortHand(cards){
+  return [...cards].sort((a,b)=> RANK_ORDER[a.rank]-RANK_ORDER[b.rank] || (a.suit||'').localeCompare(b.suit||''));
+}
+/* Applies the player's custom drag order on top of their current hand, if one is set.
+   New cards (drawn/picked up) not yet in the custom order are appended in default sorted
+   position; cards no longer in hand (melded/discarded) just drop out. Purely a client-side
+   display concern — never touches shared state. */
+function getDisplayHand(cards){
+  if(!ui.handOrder || ui.handOrder.length===0) return sortHand(cards);
+  const byId = new Map(cards.map(c=>[c.id,c]));
+  const ordered = [];
+  const seen = new Set();
+  for(const id of ui.handOrder){
+    if(byId.has(id)){ ordered.push(byId.get(id)); seen.add(id); }
+  }
+  const leftover = cards.filter(c=>!seen.has(c.id));
+  return ordered.concat(sortHand(leftover));
+}
+/* Canonical ascending order for meld groups (by rank), used as the shared default for
+   everyone's melds boards — deterministic and rank-based, so every viewer computes the
+   same order independently with no sync needed. Wild-canasta groups sort last. */
+function meldSortValue(rank){ return rank==='WILD' ? 99 : (RANK_ORDER[rank] ?? 50); }
+function sortMelds(melds){ return [...melds].sort((a,b)=>meldSortValue(a.rank)-meldSortValue(b.rank)); }
+/* Personal override on top of the ascending default, for the viewer's OWN melds board
+   only (mirrors getDisplayHand) — never affects how others see this player's melds. */
+function getDisplayMelds(melds){
+  if(!ui.meldOrder || ui.meldOrder.length===0) return sortMelds(melds);
+  const byRank = new Map(melds.map(m=>[m.rank,m]));
+  const ordered = [];
+  const seen = new Set();
+  for(const r of ui.meldOrder){
+    if(byRank.has(r)){ ordered.push(byRank.get(r)); seen.add(r); }
+  }
+  const leftover = melds.filter(m=>!seen.has(m.rank));
+  return ordered.concat(sortMelds(leftover));
+}
+function genRoomCode(){
+  const letters='ABCDEFGHJKLMNPQRSTUVWXYZ'; let s='';
+  for(let i=0;i<4;i++) s+=letters[Math.floor(Math.random()*letters.length)];
+  return s;
+}
+function genPlayerId(){ return 'p'+Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4); }
+
+/* ---------------------------- Game engine ------------------------------ */
+function nameOf(state,pid){ const p=state.players.find(x=>x.id===pid); return p?p.name:'Someone'; }
+function log(state,msg){ state.log=state.log||[]; state.log.push(msg); if(state.log.length>40) state.log=state.log.slice(-40); }
+
+function newRoomState(code, hostId, hostName){
+  return {
+    code, hostId, phase:'lobby',
+    players:[{id:hostId, name:hostName}],
+    round:1, threshold:ROUND_THRESHOLDS[0],
+    turnOrder:[], turnIndex:0, turnPhase:'draw', turnHasDrawn:false,
+    drawPile:[], discardPile:[],
+    hands:{}, feet:{}, footOpen:{}, melds:{}, redThrees:{}, initialMeldMet:{},
+    scores:{}, wentOutPlayer:null, roundBreakdowns:{},
+    log:['Room created.'], rev:1, updatedAt: Date.now()
+  };
+}
+
+function drawFromStock(state){
+  if(state.drawPile.length===0){
+    if(state.discardPile.length<=1) return null;
+    const top = state.discardPile.pop();
+    state.drawPile = shuffle(state.discardPile);
+    state.discardPile = [top];
+    log(state,'The stock ran dry — reshuffling the discard pile into a new stock.');
+  }
+  return state.drawPile.pop();
+}
+
+function resolveRedThrees(state, pid, hand){
+  let found=true;
+  while(found){
+    found=false;
+    for(let i=hand.length-1;i>=0;i--){
+      if(isRedThree(hand[i])){
+        const [rt]=hand.splice(i,1);
+        state.redThrees[pid]=state.redThrees[pid]||[];
+        state.redThrees[pid].push(rt);
+        log(state, `♥ ${nameOf(state,pid)} drew a red 3 — +100 banked! (${state.redThrees[pid].length} so far)`);
+        const repl=drawFromStock(state);
+        if(repl) hand.push(repl);
+        found=true; break;
+      }
+    }
+  }
+}
+
+function dealGame(state){
+  const numDecks = state.turnOrder.length + 1;
+  state.drawPile = shuffle(buildDeck(numDecks));
+  state.hands={}; state.feet={}; state.footOpen={}; state.melds={}; state.redThrees={}; state.initialMeldMet={};
+  for(const pid of state.turnOrder){
+    state.hands[pid] = state.drawPile.splice(state.drawPile.length-13,13);
+    state.feet[pid]  = state.drawPile.splice(state.drawPile.length-13,13);
+    state.footOpen[pid]=false; state.melds[pid]=[]; state.redThrees[pid]=[]; state.initialMeldMet[pid]=false;
+    resolveRedThrees(state, pid, state.hands[pid]);
+  }
+  state.discardPile=[];
+  let guard=0, flipped=null;
+  while(guard++<1000){
+    const c = state.drawPile.pop();
+    if(!c) break;
+    if(isRedThree(c)){ state.drawPile.push(c); state.drawPile=shuffle(state.drawPile); continue; }
+    flipped=c; break;
+  }
+  if(flipped) state.discardPile.push(flipped);
+  state.turnIndex=0; state.turnPhase='draw'; state.turnHasDrawn=false; state.pendingSecondDraw=false; state.pendingSecondDrawSource=null;
+  state.turnStartedAt = Date.now();
+  state.threshold = ROUND_THRESHOLDS[state.round-1];
+  state.wentOutPlayer=null;
+  log(state, `Hand ${state.round} dealt — lay-down minimum is ${state.threshold} points.`);
+}
+
+function topDiscard(state){ return state.discardPile.length? state.discardPile[state.discardPile.length-1] : null; }
+function pileFrozen(state){ const t=topDiscard(state); return !!(t && isBlackThree(t)); }
+
+function validateMeldGroup(cards){
+  if(cards.some(isBlackThree)) return {ok:false, reason:'Black 3s can never be melded — discard only.'};
+  if(cards.some(isRedThree)) return {ok:false, reason:'Red 3s play automatically and cannot be melded by hand.'};
+  const naturals = cards.filter(c=>!isWild(c));
+  const wilds = cards.filter(isWild);
+  if(naturals.length===0){
+    if(wilds.length===0) return {ok:false, reason:'Select at least one card.'};
+    return {ok:true, rank:'WILD'}; // all 2s/Jokers — its own wild-canasta meld
+  }
+  const rank = naturals[0].rank;
+  if(!naturals.every(c=>c.rank===rank)) return {ok:false, reason:'All natural cards in a meld must share the same rank.'};
+  if(wilds.length>0 && wilds.length>=naturals.length) return {ok:false, reason:'A meld needs more natural cards than wild cards.'};
+  return {ok:true, rank};
+}
+
+function applyMeldToBoard(state, pid, cards, forcedRank){
+  const allWild = cards.every(isWild);
+  const rank = forcedRank || (allWild ? 'WILD' : cards.find(c=>!isWild(c)).rank);
+  let meld = state.melds[pid].find(m=>m.rank===rank);
+  if(!meld){ meld={rank, cards:[]}; state.melds[pid].push(meld); }
+  meld.cards.push(...cards);
+  if(meld.rank==='WILD'){
+    meld.type = 'clean'; // house rule: a full wild canasta counts as clean
+  } else {
+    const wildCount = meld.cards.filter(isWild).length;
+    meld.type = wildCount>0 ? 'dirty' : 'clean';
+  }
+  meld.isCanasta = meld.cards.length>=7;
+}
+
+function canastaReqsMet(state,pid){
+  const c = state.melds[pid].filter(m=>m.isCanasta);
+  return c.some(x=>x.type==='clean') && c.some(x=>x.type==='dirty');
+}
+/* "Floating": played all the way through hand and foot but hasn't met the clean+dirty
+   canasta requirement yet — sitting on 0 cards until their next draw. Purely derived from
+   existing state, nothing new to track. */
+function isFloating(state,pid){
+  return (state.hands[pid]||[]).length===0 && !!state.footOpen[pid] && !canastaReqsMet(state,pid);
+}
+
+/* eligible existing (non-wild) melds a loose group of `wildCount` wild cards could be redirected into.
+   No size cap — a completed canasta can still take overflow cards, it just won't earn a second bonus. */
+function eligibleWildTargets(state, pid, wildCount){
+  return (state.melds[pid]||[]).filter(m=>{
+    if(m.rank==='WILD') return false;
+    const naturalCount = m.cards.filter(c=>!isWild(c)).length;
+    const existingWildCount = m.cards.length - naturalCount;
+    return naturalCount > (existingWildCount + wildCount);
+  });
+}
+
+function tryAddMeldGroup(state, pid, cardIds, targetRank){
+  const hand = state.hands[pid];
+  const cards = cardIds.map(id=>hand.find(c=>c.id===id)).filter(Boolean);
+  if(cards.length!==cardIds.length) return {ok:false, reason:'Card not found in hand.'};
+  const v = validateMeldGroup(cards);
+  if(!v.ok) return v;
+
+  // Redirect: an all-wild group can be aimed at an existing natural-rank meld instead of the wild canasta.
+  if(v.rank==='WILD' && targetRank && targetRank!=='WILD'){
+    const existing = state.melds[pid].find(m=>m.rank===targetRank);
+    if(!existing) return {ok:false, reason:`No open ${targetRank} meld to add these wilds to.`};
+    const combined = existing.cards.concat(cards);
+    const combinedWildCount = combined.filter(isWild).length;
+    const combinedNaturalCount = combined.length - combinedWildCount;
+    if(combinedWildCount >= combinedNaturalCount) return {ok:false, reason:'That would leave the meld with too many wilds (needs more naturals than wilds).'};
+    return {ok:true, cards, rank:targetRank};
+  }
+
+  const existing = state.melds[pid].find(m=>m.rank===v.rank);
+  if(!existing && cards.length<3) return {ok:false, reason:'A brand-new meld needs at least 3 cards.'};
+  if(existing){
+    const combined = existing.cards.concat(cards);
+    const cv = validateMeldGroup(combined);
+    if(!cv.ok) return cv;
+  }
+  return {ok:true, cards, rank:v.rank};
+}
+
+function meldActionLabel(rank){ return rank==='WILD' ? 'Wild' : rank; }
+function describeMeldAction(existedBefore, rank, count){
+  const label = meldActionLabel(rank);
+  return existedBefore
+    ? `added ${count} card${count===1?'':'s'} to their ${label} meld`
+    : `started a new ${label} meld`;
+}
+function commitMeldGroupsNow(state, pid, groups){
+  const descriptions = [];
+  for(const g of groups){
+    const ids = Array.isArray(g) ? g : g.ids;
+    const targetRank = Array.isArray(g) ? undefined : g.targetRank;
+    const r = tryAddMeldGroup(state, pid, ids, targetRank);
+    if(!r.ok) return r;
+    const existedBefore = state.melds[pid].some(m=>m.rank===r.rank);
+    const hand = state.hands[pid];
+    for(const c of r.cards){ const idx=hand.findIndex(x=>x.id===c.id); hand.splice(idx,1); }
+    applyMeldToBoard(state, pid, r.cards, r.rank);
+    descriptions.push(describeMeldAction(existedBefore, r.rank, r.cards.length));
+  }
+  log(state, `${nameOf(state,pid)} ${descriptions.join('; ')}.`);
+  checkEmptyHandDuringMeld(state, pid);
+  return {ok:true};
+}
+
+function confirmInitialMelds(state, pid, groupsOfCardIds){
+  const hand = state.hands[pid];
+  let total=0; const resolved=[];
+  for(const cardIds of groupsOfCardIds){
+    const cards = cardIds.map(id=>hand.find(c=>c.id===id)).filter(Boolean);
+    if(cards.length!==cardIds.length) return {ok:false, reason:'Card not found.'};
+    const v = validateMeldGroup(cards);
+    if(!v.ok) return v;
+    if(cards.length<3) return {ok:false, reason:'Each new meld needs at least 3 cards for your initial meld.'};
+    total += cards.reduce((s,c)=>s+cardPointValue(c),0);
+    resolved.push(cards);
+  }
+  if(total < state.threshold) return {ok:false, reason:`Only ${total} of ${state.threshold} points staged — add more or cancel.`};
+  for(const cards of resolved){
+    for(const c of cards){ const idx=hand.findIndex(x=>x.id===c.id); hand.splice(idx,1); }
+    applyMeldToBoard(state, pid, cards);
+  }
+  state.initialMeldMet[pid]=true;
+  log(state, `${nameOf(state,pid)} laid their initial meld (${total} pts).`);
+  checkEmptyHandDuringMeld(state, pid);
+  return {ok:true};
+}
+
+function drawTwoStock(state, pid){
+  const hand = state.hands[pid];
+  for(let i=0;i<2;i++){ const c=drawFromStock(state); if(c) hand.push(c); }
+  resolveRedThrees(state, pid, hand);
+  state.turnPhase='meld'; state.turnHasDrawn=true;
+  log(state, `${nameOf(state,pid)} drew 2 from the stock.`);
+  return {ok:true};
+}
+function drawDiscardPlusStock(state, pid){
+  if(pileFrozen(state)) return {ok:false, reason:'The pile is frozen by a black 3.'};
+  if(!topDiscard(state)) return {ok:false, reason:'Discard pile is empty.'};
+  const hand = state.hands[pid];
+  hand.push(state.discardPile.pop());
+  const c = drawFromStock(state); if(c) hand.push(c);
+  resolveRedThrees(state, pid, hand);
+  state.turnPhase='meld'; state.turnHasDrawn=true;
+  log(state, `${nameOf(state,pid)} took the top discard + 1 from stock.`);
+  return {ok:true};
+}
+
+/* Sequential single-card draw: draw 1 (from stock OR discard), see it, then draw the 2nd card. */
+function drawOneStockFirst(state, pid){
+  if(state.turnHasDrawn) return {ok:false, reason:'Already drew this turn.'};
+  if(state.pendingSecondDraw) return {ok:false, reason:'Finish choosing your second card first.'};
+  const hand = state.hands[pid];
+  const c = drawFromStock(state); if(c) hand.push(c);
+  resolveRedThrees(state, pid, hand);
+  state.pendingSecondDraw = true;
+  state.pendingSecondDrawSource = 'stock';
+  log(state, `${nameOf(state,pid)} drew 1 from the stock and is choosing their second card.`);
+  return {ok:true};
+}
+function drawDiscardFirst(state, pid){
+  if(state.turnHasDrawn) return {ok:false, reason:'Already drew this turn.'};
+  if(state.pendingSecondDraw) return {ok:false, reason:'Finish drawing your second card first.'};
+  if(pileFrozen(state)) return {ok:false, reason:'The pile is frozen by a black 3.'};
+  if(!topDiscard(state)) return {ok:false, reason:'Discard pile is empty.'};
+  const hand = state.hands[pid];
+  hand.push(state.discardPile.pop());
+  resolveRedThrees(state, pid, hand);
+  state.pendingSecondDraw = true;
+  state.pendingSecondDrawSource = 'discard';
+  log(state, `${nameOf(state,pid)} took the top discard and still needs to draw from the stock.`);
+  return {ok:true};
+}
+function completeDrawSecondStock(state, pid){
+  if(!state.pendingSecondDraw) return {ok:false, reason:'No draw in progress.'};
+  const hand = state.hands[pid];
+  const c = drawFromStock(state); if(c) hand.push(c);
+  resolveRedThrees(state, pid, hand);
+  state.pendingSecondDraw = false; state.pendingSecondDrawSource = null;
+  state.turnPhase='meld'; state.turnHasDrawn=true;
+  log(state, `${nameOf(state,pid)} drew a second card from the stock.`);
+  return {ok:true};
+}
+function completeDrawSecondDiscard(state, pid){
+  if(!state.pendingSecondDraw) return {ok:false, reason:'No draw in progress.'};
+  if(state.pendingSecondDrawSource==='discard') return {ok:false, reason:'You already took the discard card — draw your second card from the stock.'};
+  if(pileFrozen(state)) return {ok:false, reason:'The pile is frozen by a black 3.'};
+  if(!topDiscard(state)) return {ok:false, reason:'Discard pile is empty.'};
+  const hand = state.hands[pid];
+  hand.push(state.discardPile.pop());
+  resolveRedThrees(state, pid, hand);
+  state.pendingSecondDraw = false; state.pendingSecondDrawSource = null;
+  state.turnPhase='meld'; state.turnHasDrawn=true;
+  log(state, `${nameOf(state,pid)} took the top discard as their second card.`);
+  return {ok:true};
+}
+
+function matchedPickupCommit(state, pid, natCardIds, extraGroups){
+  const hand = state.hands[pid];
+  const top = topDiscard(state);
+  if(!top) return {ok:false, reason:'No discard to match.'};
+  if(isBlackThree(top)) return {ok:false, reason:'The pile is frozen by a black 3.'};
+  const naturals = natCardIds.map(id=>hand.find(c=>c.id===id)).filter(Boolean);
+  if(naturals.length!==2) return {ok:false, reason:'Pick exactly 2 matching cards.'};
+  if(naturals.some(c=>isWild(c)||isBlackThree(c)||isRedThree(c))) return {ok:false, reason:'Must be 2 natural (non-wild) cards.'};
+  if(!naturals.every(c=>c.rank===top.rank)) return {ok:false, reason:'Selected cards must match the discard rank.'};
+  const mandatory = [...naturals, top];
+  const mv = validateMeldGroup(mandatory);
+  if(!mv.ok) return mv;
+
+  let total = mandatory.reduce((s,c)=>s+cardPointValue(c),0);
+  const resolvedExtra=[]; // {cards, rank}
+  for(const grp of extraGroups){
+    const ids = Array.isArray(grp) ? grp : grp.ids;
+    const targetRank = Array.isArray(grp) ? undefined : grp.targetRank;
+    const r = tryAddMeldGroup(state, pid, ids, targetRank);
+    if(!r.ok) return r;
+    total += r.cards.reduce((s,c)=>s+cardPointValue(c),0);
+    resolvedExtra.push(r);
+  }
+  if(!state.initialMeldMet[pid] && total < state.threshold){
+    return {ok:false, reason:`Not enough for your initial meld yet (${total}/${state.threshold}). Add more melds or cancel the pickup.`};
+  }
+
+  const totalPileSize = state.discardPile.length; // includes the top card, before anything is removed
+  const totalTake = Math.min(7, totalPileSize); // cards leaving the discard pile overall, capped at 7 — top card counts toward this cap
+  const additionalTake = totalTake - 1; // beyond the top card, which is already spoken for by the mandatory meld
+
+  const mandatoryExistedBefore = state.melds[pid].some(m=>m.rank===mv.rank);
+  const extraExistedBefore = resolvedExtra.map(r=>state.melds[pid].some(m=>m.rank===r.rank));
+
+  for(const c of naturals){ const idx=hand.findIndex(x=>x.id===c.id); hand.splice(idx,1); }
+  state.discardPile.pop();
+  applyMeldToBoard(state, pid, mandatory);
+  for(const r of resolvedExtra){
+    for(const c of r.cards){ const idx=hand.findIndex(x=>x.id===c.id); hand.splice(idx,1); }
+    applyMeldToBoard(state, pid, r.cards, r.rank);
+  }
+  if(!state.initialMeldMet[pid]) state.initialMeldMet[pid]=true;
+
+  const taken = state.discardPile.splice(state.discardPile.length-additionalTake, additionalTake);
+  hand.push(...taken);
+  resolveRedThrees(state, pid, hand);
+  const take = totalTake;
+
+  state.turnPhase='meld'; state.turnHasDrawn=true;
+  const meldDescriptions = [describeMeldAction(mandatoryExistedBefore, mv.rank, mandatory.length)];
+  resolvedExtra.forEach((r,i)=>{ meldDescriptions.push(describeMeldAction(extraExistedBefore[i], r.rank, r.cards.length)); });
+  log(state, `${nameOf(state,pid)} matched the pile (picked up ${take} card${take===1?'':'s'}) and ${meldDescriptions.join('; ')}.`);
+  checkEmptyHandDuringMeld(state, pid);
+  return {ok:true};
+}
+
+function openFootFor(state, pid){
+  state.hands[pid] = state.feet[pid];
+  state.feet[pid] = [];
+  state.footOpen[pid] = true;
+  resolveRedThrees(state, pid, state.hands[pid]);
+}
+
+function afterHandChange(state, pid){
+  const hand = state.hands[pid];
+  if(hand.length===0){
+    if(!state.footOpen[pid]){
+      openFootFor(state, pid);
+      log(state, `${nameOf(state,pid)} emptied their hand and picked up their foot (${state.hands[pid].length} cards)!`);
+      return 'foot-opened';
+    } else {
+      if(canastaReqsMet(state,pid)) return 'went-out';
+      return 'empty-no-out';
+    }
+  }
+  return 'has-cards';
+}
+
+/* Called right after a meld commit (not a discard). Melding your whole hand away should let you
+   keep playing off the foot the same turn — only discarding ends a turn. */
+function checkEmptyHandDuringMeld(state, pid){
+  const hand = state.hands[pid];
+  if(hand.length>0) return 'has-cards';
+  if(!state.footOpen[pid]){
+    openFootFor(state, pid);
+    log(state, `${nameOf(state,pid)} melded their whole hand and jumped straight into their foot (${state.hands[pid].length} cards) — turn continues!`);
+    return 'foot-opened';
+  }
+  if(canastaReqsMet(state,pid)){
+    scoreRoundEnd(state, pid);
+    log(state, `${nameOf(state,pid)} melded through hand and foot without discarding and went out!`);
+    return 'went-out';
+  }
+  log(state, `${nameOf(state,pid)} has nothing left to play and is floating — turn ends automatically.`);
+  advanceTurn(state);
+  return 'empty-no-out';
+}
+
+function scoreRoundEnd(state, outPid){
+  state.roundBreakdowns = state.roundBreakdowns || {};
+  const breakdown = {};
+  for(const pid of state.turnOrder){
+    let meldValue=0, canastaBonus=0;
+    for(const m of state.melds[pid]){
+      meldValue += m.cards.reduce((s,c)=>s+cardPointValue(c),0);
+      if(m.isCanasta){
+        if(m.rank==='WILD') canastaBonus += 1500;
+        else canastaBonus += (m.type==='clean'?300:100);
+      }
+    }
+    const redThreeCount = state.redThrees[pid]?.length||0;
+    const redThreeBonus = redThreeCount*100;
+    const handPenalty = state.hands[pid].reduce((s,c)=>s+cardPointValue(c),0);
+    const footPenalty = state.feet[pid].reduce((s,c)=>s+cardPointValue(c),0);
+    const total = meldValue + canastaBonus + redThreeBonus - handPenalty - footPenalty;
+    breakdown[pid] = {meldValue, canastaBonus, redThreeCount, redThreeBonus, handPenalty, footPenalty, total};
+    state.scores[pid] = state.scores[pid] || [null,null,null,null];
+    state.scores[pid][state.round-1] = total;
+  }
+  state.roundBreakdowns[state.round] = breakdown;
+  state.wentOutPlayer = outPid;
+  state.phase='roundEnd';
+  log(state, `${nameOf(state,outPid)} went out! Hand ${state.round} is scored.`);
+}
+
+function advanceTurn(state){
+  state.turnIndex = (state.turnIndex+1) % state.turnOrder.length;
+  state.turnPhase='draw'; state.turnHasDrawn=false; state.pendingSecondDraw=false; state.pendingSecondDrawSource=null;
+  state.turnStartedAt = Date.now();
+}
+
+function performDiscard(state, pid, cardId){
+  const hand = state.hands[pid];
+  const idx = hand.findIndex(c=>c.id===cardId);
+  if(idx===-1) return {ok:false, reason:'Card not in hand.'};
+  const [card] = hand.splice(idx,1);
+  state.discardPile.push(card);
+  log(state, `${nameOf(state,pid)} discarded ${cardLabel(card)}.`);
+  const status = afterHandChange(state, pid);
+  if(status==='went-out'){ scoreRoundEnd(state, pid); }
+  else { advanceTurn(state); }
+  return {ok:true};
+}
+
+function afterMeldCheckAndAdvance(state, pid){
+  const hand = state.hands[pid];
+  if(hand.length===0){
+    // Emptying via melding is already handled by checkEmptyHandDuringMeld at commit time
+    // (foot opened & turn continued, went out, or genuinely nothing left) — if we land here
+    // with 0 cards, there's nothing left to meld or discard, so the turn just ends.
+    advanceTurn(state);
+    return 'empty-no-out';
+  }
+  state.turnPhase='discard';
+  return 'has-cards';
+}
+
+/* Reverses ONLY the meld->discard phase flip, and only while nothing else has happened yet.
+   Safe by construction: reaching discard phase as the active player guarantees no discard
+   has occurred and the hand is untouched (the only other path out of meld phase — emptying
+   the hand — ends the turn immediately instead of entering discard phase at all). This never
+   needs to unwind any card movement, so there's nothing else to restore. */
+function undoToMeldPhase(state, pid){
+  if(state.turnOrder[state.turnIndex] !== pid) return {ok:false, reason:'Not your turn.'};
+  if(state.turnPhase !== 'discard') return {ok:false, reason:'Nothing to undo right now.'};
+  state.turnPhase = 'meld';
+  log(state, `${nameOf(state,pid)} went back to melding.`);
+  return {ok:true};
+}
+
+function goToNextHandOrEnd(state){
+  if(state.round>=4){ state.phase='gameOver'; log(state,'The last hand is complete — game over!'); return; }
+  state.round += 1;
+  state.turnOrder.push(state.turnOrder.shift());
+  dealGame(state);
+  state.phase='playing';
+}
+
+function resetToLobby(state){
+  state.phase='lobby'; state.round=1; state.threshold=ROUND_THRESHOLDS[0];
+  state.turnOrder=[]; state.turnIndex=0; state.turnPhase='draw'; state.turnHasDrawn=false; state.pendingSecondDraw=false; state.pendingSecondDrawSource=null;
+  state.drawPile=[]; state.discardPile=[];
+  state.hands={}; state.feet={}; state.footOpen={}; state.melds={}; state.redThrees={}; state.initialMeldMet={};
+  state.scores={}; state.wentOutPlayer=null; state.roundBreakdowns={};
+  log(state,'Back to the lobby for a new game.');
+}
+
+/* ---------------------------- Networking ------------------------------- */
+/* (This banner also marks the end of the DOM-free engine for tests/extract-engine.py.) */
+
+/* ---------------------------- Storage adapters -------------------------- */
+/* Every read and write of shared room state goes through one adapter. The engine and UI
+   never call a storage API directly, so switching backends is a setting, not a fork.
+
+   Adapter interface:
+     name, label                 identifiers for display / session logic
+     init()                      connect & sign in; throws an Error with a readable message
+     get(code)                   room state, or null if there's no such room
+     create(state)               {ok:true} | {ok:false, exists:true}. Never overwrites a room.
+     update(code, mutator)       {ok:true, state} | {ok:false, reason, notFound?}
+     subscribe(code, onState)    calls onState(state) on every change; returns unsubscribe()
+
+   The mutator contract matters. update() runs mutator(state) against the LATEST stored state,
+   not this client's copy, and Firebase may run it several times if another player writes at
+   the same moment. So a mutator must only edit the state it's handed (plus reassign locals
+   that the next run overwrites). It returns {ok, reason} like the engine functions do, and
+   may return {ok:true, noWrite:true} to succeed without writing (e.g. rejoining a seat).    */
+
+const ROOM_PREFIX = 'hf2026_room_';
+
+/* Claude artifact storage (window.storage). Polling-based, not atomic: update() is a plain
+   read -> mutate -> write, so two simultaneous writers can still collide. Same behavior this
+   game has always had here; it just lives behind the adapter interface now. */
+function createClaudeAdapter(storage){
+  let writing = false; // pauses polling mid-write so a poll can't clobber a just-saved state
+  async function get(code){
+    try{
+      const res = await storage.get(ROOM_PREFIX+code, true);
+      return res ? JSON.parse(res.value) : null;
+    }catch(e){
+      // Claude's storage API throws for missing keys, so an error here usually just means
+      // "no such room". A genuine outage surfaces as a failed write instead.
+      return null;
+    }
+  }
+  async function put(state){
+    state.rev = (state.rev||0)+1;
+    state.updatedAt = Date.now();
+    await storage.set(ROOM_PREFIX+state.code, JSON.stringify(state), true);
+  }
+  return {
+    name:'claude', label:'Claude artifact storage',
+    async init(){
+      if(!storage || typeof storage.get!=='function' || typeof storage.set!=='function'){
+        throw new Error("Claude's storage isn't available on this page. Open the published artifact link rather than a downloaded copy.");
+      }
+    },
+    get,
+    async create(state){
+      if(await get(state.code)) return {ok:false, exists:true};
+      await put(state);
+      return {ok:true};
+    },
+    async update(code, mutator){
+      writing = true;
+      try{
+        const s = await get(code);
+        if(!s) return {ok:false, notFound:true, reason:'No room found with that code.'};
+        const r = mutator(s) || {ok:true};
+        if(!r.ok) return {ok:false, reason:r.reason||'Invalid move.'};
+        if(!r.noWrite) await put(s);
+        return {ok:true, state:s};
+      }finally{ writing = false; }
+    },
+    subscribe(code, onState){
+      const t = setInterval(async ()=>{
+        if(writing) return;
+        const s = await get(code);
+        if(s) onState(s);
+      }, 1800);
+      return ()=>clearInterval(t);
+    },
+  };
+}
+
+/* Firebase Realtime Database. Real-time push (no polling) and atomic updates via transactions.
+
+   Each room is stored as {json, rev, updatedAt} with the whole game state as ONE JSON string,
+   not as a native Firebase tree. On purpose: Realtime Database silently drops empty arrays and
+   null values and can turn arrays into objects — this state is full of all three (empty discard
+   piles, score slots of [null,null,null,null], empty meld lists). Storing a string round-trips
+   the state exactly, byte for byte, the same way the Claude backend stores it. */
+const FIREBASE_SDK_VERSION = '12.19.0';
+const FIREBASE_ROOT = 'hfRooms';
+
+async function loadFirebaseModules(){
+  // Test seam: tests/e2e injects a fake Firebase here. Never set in real use.
+  if(window.__HF_FIREBASE_MODULES__) return window.__HF_FIREBASE_MODULES__;
+  // Loaded on demand, so the Claude artifact (where external scripts are blocked) never tries.
+  const base = `https://www.gstatic.com/firebasejs/${FIREBASE_SDK_VERSION}/`;
+  const [app, db, auth] = await Promise.all([
+    import(base+'firebase-app.js'),
+    import(base+'firebase-database.js'),
+    import(base+'firebase-auth.js'),
+  ]);
+  return {app, db, auth};
+}
+
+function friendlyFirebaseError(e){
+  const code = (e && e.code) || '';
+  const msg = (e && e.message) || String(e);
+  if(code==='auth/operation-not-allowed' || code==='auth/admin-restricted-operation')
+    return 'Anonymous sign-in is turned off. In the Firebase console: Authentication → Sign-in method → enable Anonymous.';
+  if(code==='auth/unauthorized-domain')
+    return `This site (${location.hostname}) isn't on Firebase's authorized domains list. Add it under Authentication → Settings → Authorized domains.`;
+  if(code==='auth/invalid-api-key' || code.startsWith('auth/api-key'))
+    return 'The Firebase apiKey in HF_CONFIG looks wrong. Re-copy the config from Project settings.';
+  if(code==='auth/network-request-failed')
+    return "Couldn't reach Firebase. Check your internet connection and refresh.";
+  if(/permission[_ ]denied/i.test(msg))
+    return 'Firebase refused the request. Check that the database rules from FIREBASE_SETUP.md are published.';
+  if(/database url|databaseURL/i.test(msg))
+    return 'HF_CONFIG.firebase.databaseURL is missing or wrong. Copy it from the Realtime Database page.';
+  return msg;
+}
+
+function createFirebaseAdapter(config, loadModules){
+  let m = null, db = null;
+  const roomRef = code => m.db.ref(db, `${FIREBASE_ROOT}/${code}`);
+  const pack = s => ({json: JSON.stringify(s), rev: s.rev, updatedAt: s.updatedAt});
+  const unpack = v => (v && typeof v.json==='string') ? JSON.parse(v.json) : null;
+  return {
+    name:'firebase', label:'Firebase',
+    async init(){
+      try{ m = await loadModules(); }
+      catch(e){ throw new Error("Couldn't load Firebase. Check your internet connection and refresh."); }
+      try{
+        const app = m.app.initializeApp(config);
+        db = m.db.getDatabase(app);
+        await m.auth.signInAnonymously(m.auth.getAuth(app));
+      }catch(e){ throw new Error(friendlyFirebaseError(e)); }
+    },
+    async get(code){
+      const snap = await m.db.get(roomRef(code));
+      return snap.exists() ? unpack(snap.val()) : null;
+    },
+    async create(state){
+      state.rev = 1; state.updatedAt = Date.now();
+      const payload = pack(state);
+      // Returning undefined aborts. If the room isn't cached locally Firebase first calls this
+      // with null even when the room exists; the server then rejects our write as stale and
+      // re-runs this with the real value, which aborts — so an existing room is never overwritten.
+      const res = await m.db.runTransaction(roomRef(state.code), cur => cur===null ? payload : undefined, {applyLocally:false});
+      return res.committed ? {ok:true} : {ok:false, exists:true};
+    },
+    async update(code, mutator){
+      let outcome = null; // set by the most recent run of the update function — the one that counts
+      const res = await m.db.runTransaction(roomRef(code), cur => {
+        outcome = null;
+        // Firebase may pass null on the first run before it has the room cached. Returning null
+        // is safe: if the room really exists the server rejects this as stale and re-runs us with
+        // the real value. If it truly doesn't exist, outcome stays null and we report notFound.
+        if(cur===null) return null;
+        let s;
+        try{ s = unpack(cur); }catch(e){ s = null; }
+        if(!s){ outcome = {ok:false, reason:'That room data is unreadable.'}; return; }
+        let r;
+        try{ r = mutator(s) || {ok:true}; }
+        catch(e){ console.error(e); outcome = {ok:false, reason:'Something went wrong applying that move.'}; return; }
+        if(!r.ok){ outcome = {ok:false, reason:r.reason||'Invalid move.'}; return; }
+        if(r.noWrite){ outcome = {ok:true, state:s}; return; }
+        s.rev = (s.rev||0)+1; s.updatedAt = Date.now();
+        outcome = {ok:true, state:s, wrote:true};
+        return pack(s);
+      }, {applyLocally:false}); // don't render speculative states that a retry might replace
+      if(outcome===null) return {ok:false, notFound:true, reason:'No room found with that code.'};
+      if(outcome.wrote && !res.committed) return {ok:false, reason:'That move could not be saved. Try again.'};
+      return outcome;
+    },
+    subscribe(code, onState){
+      return m.db.onValue(roomRef(code),
+        snap => { if(snap.exists()){ try{ onState(unpack(snap.val())); }catch(e){ console.error(e); } } },
+        err => console.warn('Firebase listener error', err));
+    },
+  };
+}
+
+function claudeStoragePresent(){
+  return typeof window!=='undefined' && !!window.storage
+    && typeof window.storage.get==='function' && typeof window.storage.set==='function';
+}
+function firebaseConfigured(){
+  const f = HF_CONFIG.firebase || {};
+  return !!(f.apiKey && f.databaseURL);
+}
+/* Returns {adapter} or {error}. In 'auto' mode on a Claude host, gives window.storage a
+   moment to appear before falling back, so a slow bridge never gets mistaken for "not Claude". */
+async function chooseBackend(){
+  let want = HF_CONFIG.backend || 'auto';
+  try{ const p = new URLSearchParams(location.search).get('backend'); if(p) want = p; }catch(e){}
+  if(want==='auto'){
+    if(!claudeStoragePresent() && /claude/i.test(location.hostname)){
+      for(let i=0; i<20 && !claudeStoragePresent(); i++) await new Promise(r=>setTimeout(r,100));
+    }
+    want = claudeStoragePresent() ? 'claude' : (firebaseConfigured() ? 'firebase' : 'none');
+  }
+  if(want==='claude'){
+    return claudeStoragePresent() ? {adapter: createClaudeAdapter(window.storage)}
+      : {error:"Claude's storage isn't available here. Open the published artifact link, or set up Firebase to host this anywhere (see FIREBASE_SETUP.md)."};
+  }
+  if(want==='firebase'){
+    return firebaseConfigured() ? {adapter: createFirebaseAdapter(HF_CONFIG.firebase, loadFirebaseModules)}
+      : {error:'Firebase is selected, but HF_CONFIG.firebase in this file hasn\'t been filled in yet (see FIREBASE_SETUP.md).'};
+  }
+  return {error:'No way to sync games is set up on this page yet. Fill in HF_CONFIG.firebase in this file (see FIREBASE_SETUP.md), or open the game through its Claude artifact link.'};
+}
+
+/* ---------------------------- Sync -------------------------------------- */
+let netState = null;             // last known shared game state
+let backend = null;              // the chosen adapter
+let backendStatus = 'connecting';// 'connecting' | 'ready' | 'error'
+let backendError = '';
+let unsubscribeRoom = null;
+
+async function initBackend(){
+  backendStatus = 'connecting'; render();
+  const choice = await chooseBackend();
+  if(choice.error){ backendStatus='error'; backendError=choice.error; render(); return; }
+  try{
+    await choice.adapter.init();
+    backend = choice.adapter;
+    backendStatus = 'ready';
+  }catch(e){
+    backendStatus = 'error';
+    backendError = (e && e.message) || String(e);
+  }
+  render();
+}
+function backendReady(){
+  if(backendStatus==='ready') return true;
+  ui.error = backendStatus==='error' ? backendError : 'Still connecting. Try again in a moment.';
+  render();
+  return false;
+}
+function describeSyncError(e){
+  return backend && backend.name==='firebase' ? friendlyFirebaseError(e) : `Storage error: ${(e && e.message) || e}`;
+}
+function startSync(code){
+  stopSync();
+  unsubscribeRoom = backend.subscribe(code, remote=>{
+    if(!remote) return;
+    // rev only ever increases, so an older snapshot (e.g. a slow poll that started before our
+    // own write landed) can never roll the table back.
+    if(!netState || netState.code!==remote.code || (remote.rev||0) > (netState.rev||0)){
+      netState = remote;
+      render();
+    }
+  });
+}
+function stopSync(){ if(unsubscribeRoom){ unsubscribeRoom(); unsubscribeRoom=null; } }
+
+/* Remember this device's seat so a refresh can rejoin with one tap. Only off Claude: Claude
+   artifacts historically don't allow browser storage, and there name-matching rejoin works. */
+const SESSION_KEY = 'hf_session_v1';
+function sessionMemoryOn(){ return !!backend && backend.name!=='claude'; }
+function saveSession(){
+  if(!sessionMemoryOn() || !netState) return;
+  try{ localStorage.setItem(SESSION_KEY, JSON.stringify({code:netState.code, playerId:me.id, name:me.name})); }catch(e){}
+}
+function loadSession(){
+  if(!sessionMemoryOn()) return null;
+  try{ return JSON.parse(localStorage.getItem(SESSION_KEY)||'null'); }catch(e){ return null; }
+}
+function clearSession(){ try{ localStorage.removeItem(SESSION_KEY); }catch(e){} }
+
+/* ---------------------------- Client UI state --------------------------- */
+const me = { id:null, name:'' };
+const ui = {
+  screen:'landing', // landing | lobby | table
+  nameInput:'', joinCodeInput:'', error:'',
+  selected:new Set(),
+  stagedGroups:[],       // array of arrays of cardIds (initial-meld batch mode)
+  pickupActive:false, pickupNaturals:[], pickupExtra:[],
+  discardChoice:null,
+  lastDrawnCardId:null,
+  scoreModalSeen:false,
+  busy:false,
+  handOrder:null,       // custom hand card order (array of card ids), client-side only. null = default sort.
+  reorderMode:false,    // when true, tapping hand cards picks up/places them instead of selecting for play
+  pickedCardId:null,    // card currently "picked up" mid-reorder
+  drawnThisTurnIds:new Set(), // card ids drawn this turn, for the gold "new card" highlight
+  drawAnimation:null,    // {cards, startedAt} — brief centered popup of just-drawn card(s), private to you
+  dealAnimation:null,    // {startedAt} — brief "dealing" flourish shown when a fresh hand is dealt
+  redThreeAnimation:null, // {cards, startedAt} — celebration popup when a red 3 is auto-played
+  lastSeenPhase:null, lastSeenRound:null, // for detecting a fresh deal across polls
+  lastKnownActivePid:null,       // for detecting when it just became your turn (chime trigger)
+  lastKnownTotalRedThrees:null,  // for detecting a new red 3 across all players (chime trigger)
+  scoreboardOpen:false, scoreboardHandView:null,
+  meldOrder:null,        // custom order for YOUR OWN melds board (array of ranks). null = default ascending.
+  meldReorderMode:false, // when true, tapping meld groups picks up/places them instead of normal use
+  meldPickedRank:null,   // rank of the meld group currently "picked up" mid-reorder
+};
+
+function myTurn(){ return netState && netState.turnOrder[netState.turnIndex]===me.id; }
+function clearStaging(){ ui.selected=new Set(); ui.stagedGroups=[]; ui.pickupActive=false; ui.pickupNaturals=[]; ui.pickupExtra=[]; ui.discardChoice=null; }
+
+/* ------------------------------ Actions --------------------------------- */
+function enterRoom(state, player){
+  me.id = player.id; me.name = player.name;
+  netState = state;
+  ui.error = '';
+  ui.screen = state.phase==='lobby' ? 'lobby' : 'table';
+  saveSession();
+  startSync(state.code);
+}
+
+async function actCreateRoom(){
+  const name = ui.nameInput.trim();
+  if(!name){ ui.error='Enter your name first.'; render(); return; }
+  if(!backendReady()) return;
+  ui.busy=true; render();
+  try{
+    const id = genPlayerId();
+    // create() never overwrites, so on the rare code collision just roll a new code.
+    for(let attempt=0; attempt<5; attempt++){
+      const state = newRoomState(genRoomCode(), id, name);
+      const r = await backend.create(state);
+      if(r.ok){ enterRoom(state, {id, name}); return; }
+    }
+    ui.error = "Couldn't find a free room code. Try again.";
+  }catch(e){ ui.error = describeSyncError(e); }
+  finally{ ui.busy=false; render(); }
+}
+
+async function actJoinRoom(){
+  const name = ui.nameInput.trim();
+  const code = ui.joinCodeInput.trim().toUpperCase();
+  if(!name){ ui.error='Enter your name first.'; render(); return; }
+  if(!/^[A-Z]{4}$/.test(code)){ ui.error='Room codes are 4 letters.'; render(); return; }
+  if(!backendReady()) return;
+  ui.busy=true; render();
+  try{
+    // One atomic step, so two people joining at the same instant can't erase each other.
+    // (The old flow read the room, then wrote it back a moment later — the second writer won.)
+    let player = null;
+    const r = await backend.update(code, s=>{
+      player = null;
+      const existing = s.players.find(p=>p.name.toLowerCase()===name.toLowerCase());
+      if(existing){ player = {id:existing.id, name:existing.name}; return {ok:true, noWrite:true}; }
+      if(s.phase!=='lobby') return {ok:false, reason:'That game already started and no seat matches that name.'};
+      if(s.players.length>=6) return {ok:false, reason:'Room is full (6 players max).'};
+      const id = genPlayerId();
+      s.players.push({id, name});
+      log(s, `${name} joined the room.`);
+      player = {id, name};
+      return {ok:true};
+    });
+    if(!r.ok){ ui.error = r.reason; return; }
+    enterRoom(r.state, player);
+  }catch(e){ ui.error = describeSyncError(e); }
+  finally{ ui.busy=false; render(); }
+}
+
+async function actRejoinSession(){
+  const sess = loadSession();
+  if(!sess || !backendReady()) return;
+  ui.busy=true; render();
+  try{
+    const s = await backend.get(sess.code);
+    const p = s && s.players.find(x=>x.id===sess.playerId);
+    if(!p){ clearSession(); ui.error = `Room ${sess.code} isn't available anymore.`; return; }
+    enterRoom(s, p);
+  }catch(e){ ui.error = describeSyncError(e); }
+  finally{ ui.busy=false; render(); }
+}
+function actForgetSession(){ clearSession(); render(); }
+
+async function actStartGame(){
+  if(!netState || netState.hostId!==me.id) return;
+  await pushState(s=>{
+    if(s.phase!=='lobby') return {ok:false, reason:'The game has already started.'};
+    if(s.players.length<2) return {ok:false, reason:'Need at least 2 players.'};
+    s.turnOrder = s.players.map(p=>p.id);
+    dealGame(s);
+    s.phase = 'playing';
+    return {ok:true};
+  });
+  if(netState && netState.phase==='playing') ui.screen='table';
+  render();
+}
+
+/* Every game action goes through here. Two guards matter now that updates apply to the latest
+   STORED state rather than this client's copy:
+   - In-flight guard: a double-tap must never apply the same move twice. With the old copy-and-
+     overwrite approach a double-tapped "Draw 2" re-saved the same result; applied to fresh state
+     it would genuinely draw 4. The second tap is ignored until the first finishes.
+   - Turn guard: during play, only the active player can change the table. If this client's view
+     is stale (the turn already moved on), the action is refused instead of acting out of turn.
+     Host actions (start, next hand, new game) happen outside the 'playing' phase, so they pass. */
+let pushInFlight = false;
+async function pushState(mutator){
+  if(!netState || !backend || pushInFlight) return;
+  pushInFlight = true; ui.busy = true;
+  try{
+    const r = await backend.update(netState.code, s=>{
+      if(s.phase==='playing' && s.turnOrder[s.turnIndex]!==me.id){
+        return {ok:false, reason:"It's not your turn anymore — the table has moved on."};
+      }
+      return mutator(s) || {ok:true};
+    });
+    if(!r.ok){ ui.error = r.reason || 'Invalid move.'; }
+    else { ui.error = ''; netState = r.state; }
+  }catch(e){ ui.error = describeSyncError(e); }
+  finally{ pushInFlight = false; ui.busy = false; }
+  render();
+}
+
+function toggleSelect(cardId){
+  if(ui.selected.has(cardId)) ui.selected.delete(cardId); else ui.selected.add(cardId);
+  render();
+}
+
+/* ---- Hand reordering (client-side only, works any time, not gated by turn) ---- */
+function toggleReorderMode(){
+  if(!netState) return;
+  ui.reorderMode = !ui.reorderMode;
+  ui.pickedCardId = null;
+  if(ui.reorderMode){
+    const hand = netState.hands[me.id]||[];
+    if(!ui.handOrder || ui.handOrder.length===0){
+      ui.handOrder = getDisplayHand(hand).map(c=>c.id);
+    }
+  }
+  render();
+}
+function sortMyHand(){
+  ui.handOrder = null;
+  ui.pickedCardId = null;
+  render();
+}
+function pickOrPlaceCard(cardId){
+  const hand = netState.hands[me.id]||[];
+  if(ui.pickedCardId === null){
+    ui.pickedCardId = cardId;
+  } else if(ui.pickedCardId === cardId){
+    ui.pickedCardId = null; // tapped the same card again — cancel pickup
+  } else {
+    let order = getDisplayHand(hand).map(c=>c.id);
+    order = order.filter(id=>id!==ui.pickedCardId);
+    const targetIdx = order.indexOf(cardId);
+    order.splice(targetIdx, 0, ui.pickedCardId);
+    ui.handOrder = order;
+    ui.pickedCardId = null;
+  }
+  render();
+}
+function dropPickedAtEnd(){
+  if(ui.pickedCardId === null) return;
+  const hand = netState.hands[me.id]||[];
+  let order = getDisplayHand(hand).map(c=>c.id);
+  order = order.filter(id=>id!==ui.pickedCardId);
+  order.push(ui.pickedCardId);
+  ui.handOrder = order;
+  ui.pickedCardId = null;
+  render();
+}
+
+/* ---- Melds-board reordering (client-side only, affects only YOUR view of YOUR OWN melds) ---- */
+function toggleMeldReorderMode(){
+  if(!netState) return;
+  ui.meldReorderMode = !ui.meldReorderMode;
+  ui.meldPickedRank = null;
+  if(ui.meldReorderMode){
+    const melds = netState.melds[me.id]||[];
+    if(!ui.meldOrder || ui.meldOrder.length===0){
+      ui.meldOrder = getDisplayMelds(melds).map(m=>m.rank);
+    }
+  }
+  render();
+}
+function sortMyMelds(){
+  ui.meldOrder = null;
+  ui.meldPickedRank = null;
+  render();
+}
+function pickOrPlaceMeld(rank){
+  const melds = netState.melds[me.id]||[];
+  if(ui.meldPickedRank === null){
+    ui.meldPickedRank = rank;
+  } else if(ui.meldPickedRank === rank){
+    ui.meldPickedRank = null;
+  } else {
+    let order = getDisplayMelds(melds).map(m=>m.rank);
+    order = order.filter(r=>r!==ui.meldPickedRank);
+    const targetIdx = order.indexOf(rank);
+    order.splice(targetIdx, 0, ui.meldPickedRank);
+    ui.meldOrder = order;
+    ui.meldPickedRank = null;
+  }
+  render();
+}
+function dropPickedMeldAtEnd(){
+  if(ui.meldPickedRank === null) return;
+  const melds = netState.melds[me.id]||[];
+  let order = getDisplayMelds(melds).map(m=>m.rank);
+  order = order.filter(r=>r!==ui.meldPickedRank);
+  order.push(ui.meldPickedRank);
+  ui.meldOrder = order;
+  ui.meldPickedRank = null;
+  render();
+}
+
+/* ---- "Just drawn" highlight tracking (client-side only) ---- */
+function currentHandIds(){
+  return new Set((netState?.hands[me.id]||[]).map(c=>c.id));
+}
+function markNewlyDrawn(beforeIds, {reset=false} = {}){
+  if(reset) ui.drawnThisTurnIds = new Set();
+  const afterIds = (netState?.hands[me.id]||[]).map(c=>c.id);
+  for(const id of afterIds){ if(!beforeIds.has(id)) ui.drawnThisTurnIds.add(id); }
+}
+function clearNewlyDrawn(){ ui.drawnThisTurnIds = new Set(); }
+function newlyDrawnCards(beforeIds){
+  const hand = netState?.hands[me.id] || [];
+  return hand.filter(c=>!beforeIds.has(c.id));
+}
+
+/* ---- Draw / deal animation triggers (client-side only, purely cosmetic) ---- */
+const DRAW_ANIM_MS = 1500;
+const RED3_ANIM_MS = 1500;
+const DEAL_STAGGER_MS = 90;  // gap between each hand card's individual pop-in
+const DEAL_POP_MS = 380;     // how long each individual card's pop-in takes
+function triggerDrawAnimation(cardObjs){
+  if(!cardObjs || cardObjs.length===0) return;
+  ui.drawAnimation = {cards: cardObjs, startedAt: Date.now()};
+  setTimeout(()=>{
+    if(ui.drawAnimation && Date.now()-ui.drawAnimation.startedAt >= DRAW_ANIM_MS){ ui.drawAnimation=null; render(); }
+  }, DRAW_ANIM_MS + 80);
+}
+function dismissDrawAnimation(){ ui.drawAnimation=null; render(); }
+function triggerRedThreeAnimation(cardObjs, onDone){
+  if(!cardObjs || cardObjs.length===0){ if(onDone) onDone(); return; }
+  ui.redThreeAnimation = {cards: cardObjs, startedAt: Date.now()};
+  render();
+  setTimeout(()=>{
+    ui.redThreeAnimation = null;
+    if(onDone) onDone();
+    render();
+  }, RED3_ANIM_MS + 60);
+}
+function dismissRedThreeAnimation(){ ui.redThreeAnimation=null; render(); }
+/* Shared entry point for every draw action: if any red 3s were auto-played as part of
+   this draw, play their celebration first, then the normal "you drew" popup right after
+   (back-to-back, per the chosen design). Otherwise just the normal popup, as before. */
+function triggerDrawSequence(before, redBefore){
+  const newRed = (netState?.redThrees[me.id]||[]).slice(redBefore);
+  const newCards = newlyDrawnCards(before);
+  if(newRed.length>0){
+    triggerRedThreeAnimation(newRed, ()=>triggerDrawAnimation(newCards));
+  } else {
+    triggerDrawAnimation(newCards);
+  }
+}
+function checkForDealTransition(s){
+  if(!s) return;
+  const freshDeal = s.phase==='playing' && (ui.lastSeenPhase!=='playing' || ui.lastSeenRound!==s.round);
+  if(freshDeal){
+    const handSize = (s.hands[me.id]||[]).length || 13;
+    const totalMs = handSize*DEAL_STAGGER_MS + DEAL_POP_MS + 250;
+    ui.dealAnimation = {startedAt: Date.now(), totalMs, round: s.round};
+    setTimeout(()=>{
+      if(ui.dealAnimation && Date.now()-ui.dealAnimation.startedAt >= ui.dealAnimation.totalMs){ ui.dealAnimation=null; render(); }
+    }, totalMs + 100);
+
+    // Any red 3s dealt straight into the initial hand still deserve their moment — celebrate
+    // them once the deal-in stagger finishes, rather than overlapping two centered animations.
+    const dealtRedThrees = s.redThrees[me.id] || [];
+    if(dealtRedThrees.length > 0){
+      const cardsToShow = [...dealtRedThrees];
+      setTimeout(()=>{ triggerRedThreeAnimation(cardsToShow); }, totalMs + 150);
+    }
+  }
+  ui.lastSeenPhase = s.phase;
+  ui.lastSeenRound = s.round;
+}
+
+/* ---- Audio: soft synthesized chimes, no external files ---- */
+let audioCtx = null;
+function getAudioCtx(){
+  if(!audioCtx){
+    try{ audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }
+    catch(e){ return null; }
+  }
+  if(audioCtx.state==='suspended'){ audioCtx.resume().catch(()=>{}); }
+  return audioCtx;
+}
+function playTone(freqs, {duration=0.14, gap=0.03, type='sine', volume=0.13} = {}){
+  const ctx = getAudioCtx();
+  if(!ctx) return;
+  let t = ctx.currentTime;
+  freqs.forEach(f=>{
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = type;
+    osc.frequency.value = f;
+    gain.gain.setValueAtTime(0, t);
+    gain.gain.linearRampToValueAtTime(volume, t+0.012);
+    gain.gain.exponentialRampToValueAtTime(0.001, t+duration);
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start(t); osc.stop(t+duration+0.02);
+    t += duration+gap;
+  });
+}
+/* Two soft ascending notes — private, only the player whose turn just started hears this. */
+function playTurnChime(){ playTone([660,880], {duration:0.14, gap:0.03, type:'sine', volume:0.12}); }
+/* Three brighter triangle-wave notes — deliberately distinct from the turn chime, and
+   heard by everyone at the table (not just whoever drew the card). */
+function playRedThreeChime(){ playTone([784,988,1175], {duration:0.11, gap:0.02, type:'triangle', volume:0.15}); }
+
+/* ---- Chime triggers: diff against last-known state on every render ---- */
+function checkForTurnStartChime(s){
+  if(!s || s.phase!=='playing') return;
+  const activePid = s.turnOrder[s.turnIndex];
+  if(ui.lastKnownActivePid !== null && activePid===me.id && ui.lastKnownActivePid!==me.id){
+    playTurnChime();
+  }
+  ui.lastKnownActivePid = activePid;
+}
+function checkForRedThreeChime(s){
+  if(!s) return;
+  const total = s.turnOrder.reduce((sum,pid)=>sum+((s.redThrees[pid]||[]).length), 0);
+  if(ui.lastKnownTotalRedThrees !== null && total > ui.lastKnownTotalRedThrees){
+    playRedThreeChime();
+  }
+  ui.lastKnownTotalRedThrees = total;
+}
+function renderDrawOverlay(){
+  if(!ui.drawAnimation) return '';
+  const elapsed = Date.now() - ui.drawAnimation.startedAt;
+  if(elapsed > DRAW_ANIM_MS) return '';
+  return `<div class="draw-overlay" style="animation-delay:-${elapsed}ms" onclick="dismissDrawAnimation()">
+    <div class="draw-overlay-label">You drew</div>
+    <div style="display:flex;gap:8px">${ui.drawAnimation.cards.map(c=>renderCardEl(c,{big:true})).join('')}</div>
+  </div>`;
+}
+const SPARKLE_OFFSETS = [
+  {x:-64,y:-38},{x:0,y:-58},{x:64,y:-38},
+  {x:-78,y:8},{x:78,y:8},
+  {x:-54,y:50},{x:0,y:60},{x:54,y:50}
+];
+const SPARKLE_CHARS = ['✦','✧','★','✨'];
+function renderSparkles(seed){
+  return SPARKLE_OFFSETS.map((o,i)=>{
+    const ch = SPARKLE_CHARS[(i+seed)%SPARKLE_CHARS.length];
+    const delay = (i*60)%400;
+    return `<span class="sparkle" style="margin-left:${o.x}px;margin-top:${o.y}px;animation-delay:${delay}ms">${ch}</span>`;
+  }).join('');
+}
+function renderRedThreeOverlay(){
+  if(!ui.redThreeAnimation) return '';
+  const elapsed = Date.now() - ui.redThreeAnimation.startedAt;
+  if(elapsed > RED3_ANIM_MS) return '';
+  const n = ui.redThreeAnimation.cards.length;
+  const label = n>1 ? `🎉 ${n} Red 3s! +${n*100} 🎉` : `🎉 Red 3! +100 🎉`;
+  return `<div class="draw-overlay" style="animation-delay:-${elapsed}ms" onclick="dismissRedThreeAnimation()">
+    <div class="red3-celebrate-label">${label}</div>
+    <div class="red3-celebrate-stage">
+      ${ui.redThreeAnimation.cards.map((c,i)=>`<div class="red3-card-wrap">${renderRedThreeCard(c)}${renderSparkles(i)}</div>`).join('')}
+    </div>
+  </div>`;
+}
+/* Per-card delay (ms) for the staggered deal-in pop, or null once the window has passed. */
+function dealDelayForIndex(i){
+  if(!ui.dealAnimation) return null;
+  const elapsed = Date.now() - ui.dealAnimation.startedAt;
+  if(elapsed > ui.dealAnimation.totalMs) return null;
+  return i*DEAL_STAGGER_MS - elapsed;
+}
+/* Small, non-blocking context label — the actual "dealing" motion happens on the
+   real hand cards themselves (see dealDelayForIndex, used in the hand-row render). */
+function renderDealBanner(s){
+  if(!ui.dealAnimation) return '';
+  const elapsed = Date.now() - ui.dealAnimation.startedAt;
+  if(elapsed > ui.dealAnimation.totalMs) return '';
+  return `<div class="deal-banner" style="animation:dealBannerFade ${ui.dealAnimation.totalMs}ms ease both;animation-delay:-${elapsed}ms">Dealing Hand ${s.round}…</div>`;
+}
+
+function handleCodeInput(el){
+  const clean = el.value.toUpperCase().replace(/[^A-Z]/g,'').slice(0,4);
+  el.value = clean;
+  ui.joinCodeInput = clean;
+}
+
+async function actDrawTwo(){
+  const before = currentHandIds();
+  const redBefore = (netState?.redThrees[me.id]||[]).length;
+  await pushState(s=>drawTwoStock(s, me.id));
+  if(!ui.error){ markNewlyDrawn(before, {reset:true}); triggerDrawSequence(before, redBefore); }
+  render();
+}
+async function actDrawDiscard(){
+  const before = currentHandIds();
+  const redBefore = (netState?.redThrees[me.id]||[]).length;
+  await pushState(s=>drawDiscardFirst(s, me.id));
+  if(!ui.error && netState){
+    const h = netState.hands[me.id]||[];
+    ui.lastDrawnCardId = h.length ? h[h.length-1].id : null;
+    markNewlyDrawn(before, {reset:true});
+    triggerDrawSequence(before, redBefore);
+  }
+  render();
+}
+async function actDrawOneStock(){
+  const before = currentHandIds();
+  const redBefore = (netState?.redThrees[me.id]||[]).length;
+  await pushState(s=>drawOneStockFirst(s, me.id));
+  if(!ui.error && netState){
+    const h = netState.hands[me.id]||[];
+    ui.lastDrawnCardId = h.length ? h[h.length-1].id : null;
+    markNewlyDrawn(before, {reset:true});
+    triggerDrawSequence(before, redBefore);
+  }
+  render();
+}
+async function actCompleteStock(){
+  const before = currentHandIds();
+  const redBefore = (netState?.redThrees[me.id]||[]).length;
+  await pushState(s=>completeDrawSecondStock(s, me.id));
+  ui.lastDrawnCardId=null;
+  if(!ui.error){ markNewlyDrawn(before); triggerDrawSequence(before, redBefore); }
+  render();
+}
+async function actCompleteDiscard(){
+  const before = currentHandIds();
+  const redBefore = (netState?.redThrees[me.id]||[]).length;
+  await pushState(s=>completeDrawSecondDiscard(s, me.id));
+  ui.lastDrawnCardId=null;
+  if(!ui.error){ markNewlyDrawn(before); triggerDrawSequence(before, redBefore); }
+  render();
+}
+
+function startPickup(){
+  const top = topDiscard(netState);
+  if(!top){ ui.error='No discard to match.'; render(); return; }
+  const hand = netState.hands[me.id];
+  const naturals = hand.filter(c=>!isWild(c) && !isBlackThree(c) && c.rank===top.rank);
+  if(naturals.length<2){ ui.error='You need 2 natural cards matching the top discard.'; render(); return; }
+  clearStaging();
+  ui.pickupActive = true;
+  render();
+}
+function cancelPickup(){ clearStaging(); render(); }
+
+function addStagedGroup(){
+  if(ui.selected.size===0) return;
+  const ids = [...ui.selected];
+  ui.stagedGroups.push(ids);
+  ui.selected = new Set();
+  render();
+}
+function removeStagedGroup(i){ ui.stagedGroups.splice(i,1); render(); }
+function removePickupExtraGroup(i){ ui.pickupExtra.splice(i,1); render(); }
+
+async function actAddMeldNow(targetRank){
+  if(ui.selected.size===0) return;
+  const ids=[...ui.selected];
+  const group = targetRank ? {ids, targetRank} : ids;
+  await pushState(s=>commitMeldGroupsNow(s, me.id, [group]));
+  if(!ui.error) ui.selected=new Set();
+  render();
+}
+
+async function actConfirmInitial(){
+  if(ui.selected.size>0) addStagedGroup();
+  if(ui.stagedGroups.length===0){ ui.error='Stage at least one meld first.'; render(); return; }
+  const groups = ui.stagedGroups;
+  await pushState(s=>confirmInitialMelds(s, me.id, groups));
+  if(!ui.error) clearStaging();
+  render();
+}
+
+function confirmPickupNaturalPick(cardId){
+  if(ui.pickupNaturals.includes(cardId)){ ui.pickupNaturals = ui.pickupNaturals.filter(x=>x!==cardId); }
+  else if(ui.pickupNaturals.length<2){ ui.pickupNaturals.push(cardId); }
+  render();
+}
+function addPickupExtraGroup(){
+  const ids=[...ui.selected].filter(id=>!ui.pickupNaturals.includes(id));
+  if(ids.length===0) return;
+  ui.pickupExtra.push(ids);
+  ui.selected=new Set();
+  render();
+}
+async function actConfirmPickup(){
+  if(ui.pickupNaturals.length!==2){ ui.error='Select exactly 2 matching cards.'; render(); return; }
+  if(ui.selected.size>0) addPickupExtraGroup();
+  const nat=[...ui.pickupNaturals], extra=ui.pickupExtra.map(g=>[...g]);
+  const before = currentHandIds();
+  const redBefore = (netState?.redThrees[me.id]||[]).length;
+  await pushState(s=>matchedPickupCommit(s, me.id, nat, extra));
+  if(!ui.error){ clearStaging(); markNewlyDrawn(before, {reset:true}); triggerDrawSequence(before, redBefore); }
+  render();
+}
+
+function clearDrawnIfTurnEnded(){
+  if(netState && netState.turnOrder[netState.turnIndex]!==me.id) clearNewlyDrawn();
+}
+
+async function actMoveToDiscardPhase(){
+  const singleSelected = ui.selected.size===1 ? [...ui.selected][0] : null;
+  await pushState(s=>{
+    const r = afterMeldCheckAndAdvance(s, me.id);
+    return {ok:true};
+  });
+  clearStaging();
+  clearDrawnIfTurnEnded();
+  if(singleSelected && netState && netState.turnPhase==='discard' && netState.turnOrder[netState.turnIndex]===me.id){
+    const stillInHand = (netState.hands[me.id]||[]).some(c=>c.id===singleSelected);
+    if(stillInHand) ui.discardChoice = singleSelected;
+  }
+  render();
+}
+async function actUndoToMeld(){
+  await pushState(s=>undoToMeldPhase(s, me.id));
+  ui.discardChoice = null;
+  render();
+}
+
+function pickDiscard(cardId){ ui.discardChoice = (ui.discardChoice===cardId)?null:cardId; render(); }
+async function actDiscard(){
+  if(!ui.discardChoice){ ui.error='Pick a card to discard.'; render(); return; }
+  const cid = ui.discardChoice;
+  await pushState(s=>performDiscard(s, me.id, cid));
+  clearStaging();
+  clearDrawnIfTurnEnded();
+  render();
+}
+
+async function actContinueRound(){
+  await pushState(s=>{
+    // Phase check: without it a second click (or a second host tab) would skip a whole hand.
+    if(s.phase!=='roundEnd') return {ok:false, reason:'That hand has already moved on.'};
+    if(s.hostId!==me.id) return {ok:false, reason:'Only the host can deal the next hand.'};
+    goToNextHandOrEnd(s); return {ok:true};
+  });
+  clearStaging();
+}
+async function actNewGame(){
+  await pushState(s=>{
+    if(s.phase!=='gameOver') return {ok:false, reason:'A new game has already been started.'};
+    if(s.hostId!==me.id) return {ok:false, reason:'Only the host can start a new game.'};
+    resetToLobby(s); return {ok:true};
+  });
+  clearStaging();
+  ui.screen='lobby';
+}
+
+function toggleScoreboard(){
+  ui.scoreboardOpen = !ui.scoreboardOpen;
+  if(ui.scoreboardOpen) ui.scoreboardHandView = null;
+  render();
+}
+function viewHandBreakdown(n){
+  ui.scoreboardHandView = (ui.scoreboardHandView===n) ? null : n;
+  render();
+}
+
+/* ------------------------------ Rendering -------------------------------- */
+function renderCardEl(c, {clickable=false, selected=false, big=false, newDraw=false, dealDelayMs=null, onClickAttr=''} = {}){
+  const cls = ['card', cardColorClass(c), clickable?'clickable':'', selected?'selected':'', big?'big':'', newDraw?'new-draw':'', dealDelayMs!=null?'deal-in':''].filter(Boolean).join(' ');
+  const suit = c.rank==='JOKER' ? '★' : c.suit;
+  const style = dealDelayMs!=null ? `style="animation-delay:${dealDelayMs}ms"` : '';
+  return `<div class="${cls}" ${style} ${onClickAttr}>
+    <div>${esc(cardLabel(c).replace(c.suit||'',''))}</div>
+    <div class="suit">${suit||''}</div>
+  </div>`;
+}
+function renderMiniCard(c){
+  return `<div class="mini-card ${cardColorClass(c)}">${esc(c.rank==='JOKER'?'JKR':c.rank)}${c.suit&&c.rank!=='JOKER'?esc(c.suit):''}</div>`;
+}
+function renderMiniRedThree(c){
+  return `<div class="mini-card red red3">${esc(c.rank)}${esc(c.suit)}</div>`;
+}
+function renderRedThreeCard(c){
+  return `<div class="red3-card"><div>${esc(c.rank)}</div><div class="suit">${esc(c.suit)}</div></div>`;
+}
+
+function renderLanding(){
+  return `
+  <div class="landing">
+    <div class="landing-card panel">
+      <h1>Hand &amp; Foot</h1>
+      <p class="sub">A custom house-rules table for up to 6 players, from any device.</p>
+      ${backendStatus==='connecting'?`<div class="footnote" style="margin:0 0 10px">Connecting…</div>`:''}
+      ${backendStatus==='error'?`<div class="error-box">${esc(backendError)}</div>`:''}
+      ${ui.error && ui.error!==backendError?`<div class="error-box">${esc(ui.error)}</div>`:''}
+      ${(()=>{ const sess = backendStatus==='ready' ? loadSession() : null; return sess ? `
+        <button class="btn" style="width:100%;margin-bottom:6px" onclick="actRejoinSession()" ${ui.busy?'disabled':''}>Rejoin room ${esc(sess.code)} as ${esc(sess.name)}</button>
+        <p class="footnote" style="margin:0 0 14px;text-align:center"><a href="#" style="color:var(--cream-dim)" onclick="actForgetSession();return false;">Not you, or starting fresh? Forget this</a></p>
+        <div class="or-divider">or</div>` : ''; })()}
+      <div class="field">
+        <label>Your name</label>
+        <input id="nameInput" type="text" maxlength="20" value="${esc(ui.nameInput)}" placeholder="e.g. Jordan" oninput="ui.nameInput=this.value">
+      </div>
+      <button class="btn" style="width:100%" onclick="actCreateRoom()" ${ui.busy||backendStatus!=='ready'?'disabled':''}>Create a room</button>
+      <div class="or-divider">or join one</div>
+      <div class="field">
+        <label>Room code</label>
+        <input id="codeInput" type="text" inputmode="text" autocomplete="off" style="text-transform:uppercase;letter-spacing:.15em" value="${esc(ui.joinCodeInput)}" placeholder="ABCD" oninput="handleCodeInput(this)">
+      </div>
+      <button class="btn secondary" style="width:100%" onclick="actJoinRoom()" ${ui.busy||backendStatus!=='ready'?'disabled':''}>Join room</button>
+      <p class="footnote">Room codes are always 4 letters (e.g. ABCD).</p>
+      ${backend && backend.name==='claude'
+        ? `<p class="footnote">Share the published artifact link so everyone joins the same table. Don't refresh mid-game unless reconnecting (rejoin with the same name to resume your seat).</p>`
+        : `<p class="footnote">Refreshed or lost connection? This device remembers your seat, or rejoin with the same name and room code.</p>`}
+      ${backend?`<p class="footnote" style="opacity:.7">Sync: ${esc(backend.label)}</p>`:''}
+    </div>
+  </div>`;
+}
+
+function renderLobby(){
+  const s = netState;
+  const isHost = s.hostId===me.id;
+  const decks = s.players.length+1;
+  return `
+  <div class="wrap">
+    <div class="lobby-top">
+      <div>
+        <div class="badge">ROOM <span style="color:var(--cream)">${esc(s.code)}</span></div>
+        <p class="footnote">Share this code — up to 6 players.</p>
+      </div>
+      ${isHost?`<button class="btn" onclick="actStartGame()" ${s.players.length<2||ui.busy?'disabled':''}>Start game (${s.players.length} joined)</button>`
+              :`<span class="pill-small">Waiting for host to start…</span>`}
+    </div>
+    ${ui.error?`<div class="error-box">${esc(ui.error)}</div>`:''}
+    <div class="panel">
+      <h3 style="margin-top:0">Players</h3>
+      <div class="player-grid">
+        ${s.players.map((p,i)=>`<div class="player-tile"><div class="seat">SEAT ${i+1}${p.id===s.hostId?' · HOST':''}</div><div class="pname">${esc(p.name)}${p.id===me.id?' (you)':''}</div></div>`).join('')}
+      </div>
+      <p class="footnote">Deck count scales with the table: ${decks} deck${decks===1?'':'s'} for ${s.players.length} player${s.players.length===1?'':'s'}.</p>
+    </div>
+  </div>`;
+}
+
+function meldRankLabel(rank){ return rank==='WILD' ? '★ Wild' : rank; }
+function meldCountLabel(m){ return m.isCanasta ? `${m.cards.length} cards` : `${m.cards.length}/7`; }
+function meldBadge(m){
+  if(!m.isCanasta) return '';
+  if(m.rank==='WILD') return '· WILD 1500';
+  return m.type==='clean' ? '· CLEAN ♥' : '· DIRTY ♠';
+}
+/* Compact opponent-chip meld indicator. Completed canastas get a solid red/black fill
+   capped with a suit glyph (♥ clean / ♠ dirty), mirroring the physical convention of
+   topping a finished canasta with a red or black card. Melds still in progress that
+   already contain a wild get a small muted wild-count tag instead, so you can see a
+   pile trending dirty before it's actually complete — without it reading as "finished". */
+function renderOppMeldChip(m){
+  const label = esc(meldRankLabel(m.rank));
+  if(m.isCanasta){
+    if(m.rank==='WILD'){
+      return `<span class="rankchip done" style="color:var(--brass-bright)">${label} ${m.cards.length}</span>`;
+    }
+    const cls = m.type==='clean' ? 'canasta-clean' : 'canasta-dirty';
+    const glyph = m.type==='clean' ? '♥' : '♠';
+    return `<span class="rankchip ${cls}">${label} ${m.cards.length}<span class="cap-glyph">${glyph}</span></span>`;
+  }
+  const wildCount = m.cards.filter(isWild).length;
+  const wildTag = wildCount>0 ? `<span class="wild-tag">●${wildCount}</span>` : '';
+  return `<span class="rankchip ${m.type||''}">${label} ${m.cards.length}${wildTag}</span>`;
+}
+function renderMeldsBoard(state, pid, {mine}){
+  const raw = state.melds[pid]||[];
+  const groups = mine ? getDisplayMelds(raw) : sortMelds(raw);
+  if(groups.length===0) return `<p class="footnote">No melds yet.</p>`;
+  const reordering = mine && ui.meldReorderMode;
+  return `<div class="meld-groups">${groups.map(m=>{
+    const picked = reordering && ui.meldPickedRank===m.rank;
+    const cls = ['meld-group', m.isCanasta?'locked':'', reordering?'reorderable':'', picked?'picked':''].filter(Boolean).join(' ');
+    const clickAttr = reordering ? `onclick="pickOrPlaceMeld('${m.rank}')"` : '';
+    return `<div class="${cls}" ${clickAttr}>
+      <div class="mg-head"><span>${esc(meldRankLabel(m.rank))}</span><span>${meldCountLabel(m)} ${meldBadge(m)}</span></div>
+      <div class="mg-cards">${mine ? m.cards.map(renderMiniCard).join('') : `<span class="pill-small">${m.type}</span>`}</div>
+    </div>`;
+  }).join('')}${reordering && ui.meldPickedRank ? `<div class="meld-group drop-slot" onclick="dropPickedMeldAtEnd()">Drop<br>at end</div>` : ''}</div>`;
+}
+
+/* The other players listed in the order they will play *after you*, wrapping around the table.
+   Anchored to you, not to the active player: with turn order [A, me, B, C] this always returns
+   [B, C, A], for the whole hand, no matter whose turn it currently is.
+
+   Why anchored rather than rotating with the active player: the chips then never change
+   position, so "the first chip is the player who receives my discard" is a fact you can rely on
+   without re-reading the row. Playtest problem this fixes — the opponent row used to be plain
+   seat order, so the player who follows you could sit in the middle of the row, and a discard
+   that hands them a card they want is easy to make by mistake.
+
+   Excludes you. Returns turnOrder untouched if you aren't in it (spectator / pre-deal), which
+   is what keeps the slice arithmetic from silently duplicating players on an indexOf of -1. */
+function opponentTurnOrder(turnOrder, myId){
+  const i = turnOrder.indexOf(myId);
+  if(i < 0) return turnOrder.slice();
+  return turnOrder.slice(i+1).concat(turnOrder.slice(0, i));
+}
+
+function renderTable(){
+  const s = netState;
+  const meIdx = s.turnOrder.indexOf(me.id);
+  const activePid = s.turnOrder[s.turnIndex];
+  const myHand = getDisplayHand(s.hands[me.id]||[]);
+  const top = topDiscard(s);
+  const frozen = pileFrozen(s);
+  const canPickup = !!top && !frozen && myHand.filter(c=>!isWild(c)&&!isBlackThree(c)&&c.rank===top.rank).length>=2;
+
+  const oppOrder = opponentTurnOrder(s.turnOrder, me.id);
+  const nextPid = oppOrder[0] || null;
+  const oppRow = oppOrder.map(pid=>{
+    const p = s.players.find(x=>x.id===pid);
+    const handCt = (s.hands[pid]||[]).length;
+    const footCt = (s.feet[pid]||[]).length;
+    const canastas = (s.melds[pid]||[]).filter(m=>m.isCanasta);
+    const redThrees = s.redThrees[pid]||[];
+    const floating = isFloating(s, pid);
+    return `<div class="opp-chip ${pid===nextPid?'next-up':''} ${pid===activePid?'active':''}">
+      <div class="oname">${esc(p?p.name:'?')} ${pid===activePid?'· turn':''}${pid===nextPid?'<span class="next-badge">NEXT</span>':''}</div>
+      <div class="mono" style="font-size:.72rem;color:var(--cream-dim)">Hand ${handCt} · Foot ${s.footOpen[pid]?'open':footCt}${floating?'<span class="floating-badge">☁ Floating</span>':''}</div>
+      <div class="melds">${sortMelds(s.melds[pid]||[]).map(renderOppMeldChip).join('')||'<span class="rankchip">—</span>'}</div>
+      ${redThrees.length?`<div class="melds" style="margin-top:4px">${redThrees.map(renderMiniRedThree).join('')}<span class="pill-small" style="margin-left:4px">+${redThrees.length*100}</span></div>`:''}
+    </div>`;
+  }).join('');
+
+  const myScore = (s.scores[me.id]||[]).filter(v=>v!=null).reduce((a,b)=>a+b,0);
+  const anyScored = s.turnOrder.some(pid=>(s.scores[pid]||[]).some(v=>v!=null));
+  const myRank = anyScored ? (computeRankings(s).find(r=>r.pid===me.id)||{}).rank : null;
+
+  let actionBar = '';
+  if(activePid!==me.id){
+    actionBar = `<div class="footnote">Waiting on ${esc(nameOf(s,activePid))}…</div>`;
+  } else if(s.turnPhase==='draw' && s.pendingSecondDraw){
+    const drawnCard = myHand.find(c=>c.id===ui.lastDrawnCardId);
+    const fromDiscard = s.pendingSecondDrawSource==='discard';
+    actionBar = `
+      <div style="width:100%">
+        <div class="footnote">First card${drawnCard?' ('+esc(cardLabel(drawnCard))+')':''} taken${fromDiscard?' from the discard pile':' from the stock'}. ${fromDiscard?'Now draw your second card from the stock:':'Choose your second card:'}</div>
+        <div class="stg-row" style="display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn" onclick="actCompleteStock()" ${ui.busy?'disabled':''}>Draw 1 more from stock</button>
+          ${fromDiscard?'':`<button class="btn secondary" onclick="actCompleteDiscard()" ${(ui.busy||frozen||!top)?'disabled':''}>Take top discard${frozen?' (frozen)':''}</button>`}
+        </div>
+      </div>`;
+  } else if(s.turnPhase==='draw' && !ui.pickupActive){
+    actionBar = `
+      <button class="btn" onclick="actDrawTwo()" ${ui.busy?'disabled':''}>Draw 2 from stock</button>
+      <button class="btn secondary" onclick="actDrawOneStock()" ${ui.busy?'disabled':''}>Draw 1 from stock, then choose</button>
+      <button class="btn secondary" onclick="actDrawDiscard()" ${(ui.busy||frozen||!top)?'disabled':''}>Take top discard, then draw stock${frozen?' (frozen)':''}</button>
+      <button class="btn secondary" onclick="startPickup()" ${(ui.busy||!canPickup)?'disabled':''}>Matched pickup${frozen?' (frozen)':''}</button>
+      ${frozen?'<span class="pill-small">Pile frozen by a black 3</span>':''}
+    `;
+  } else if(ui.pickupActive){
+    const stagedVal = ui.pickupExtra.flat().reduce((sum,id)=>{const c=myHand.find(x=>x.id===id); return sum+(c?cardPointValue(c):0);},0)
+      + (ui.pickupNaturals.length===2 ? ui.pickupNaturals.reduce((sum,id)=>{const c=myHand.find(x=>x.id===id); return sum+(c?cardPointValue(c):0);},0) + (top?cardPointValue(top):0) : 0);
+    actionBar = `
+      <div style="width:100%">
+        <div class="footnote">Pick exactly 2 matching cards for the top discard (${top?esc(cardLabel(top)):''}), then optionally stage more melds before confirming.</div>
+        <div class="stage-panel">
+          <div class="stg-row">Selected pair: ${ui.pickupNaturals.length}/2 ${!s.initialMeldMet[me.id]?`· staged value so far: ${stagedVal}/${s.threshold}`:''}</div>
+          ${ui.pickupExtra.length?`<div class="stg-row">Extra staged melds: ${ui.pickupExtra.map((g,i)=>`<span class="pill-small">group ${i+1} (${g.length} cards) <a href="#" onclick="removePickupExtraGroup(${i});return false;" style="color:#ffb;">×</a></span>`).join(' ')}</div>`:''}
+          <div class="stg-row">
+            <button class="btn small secondary" onclick="addPickupExtraGroup()" ${ui.selected.size===0?'disabled':''}>Stage selected as extra meld</button>
+            <button class="btn small" onclick="actConfirmPickup()" ${ui.busy?'disabled':''}>Confirm pickup</button>
+            <button class="btn small danger" onclick="cancelPickup()">Cancel</button>
+          </div>
+        </div>
+      </div>`;
+  } else if(s.turnPhase==='meld'){
+    if(s.initialMeldMet[me.id]){
+      const selCards = [...ui.selected].map(id=>myHand.find(c=>c.id===id)).filter(Boolean);
+      const allWildSel = selCards.length>0 && selCards.every(isWild);
+      const wildTargets = allWildSel ? eligibleWildTargets(s, me.id, selCards.length) : [];
+      if(allWildSel && wildTargets.length>0){
+        actionBar = `
+          <div style="width:100%">
+            <div class="footnote">These ${selCards.length} card${selCards.length===1?' is':' are'} all wild — choose where to lay ${selCards.length===1?'it':'them'}:</div>
+            <div class="stg-row" style="display:flex;gap:8px;flex-wrap:wrap">
+              <button class="btn small" onclick="actAddMeldNow('WILD')" ${ui.busy?'disabled':''}>Wild canasta</button>
+              ${sortMelds(wildTargets).map(m=>`<button class="btn small secondary" onclick="actAddMeldNow('${esc(m.rank)}')" ${ui.busy?'disabled':''}>Add to ${esc(meldRankLabel(m.rank))}s (${m.type}, ${meldCountLabel(m)})</button>`).join('')}
+            </div>
+            <div class="stg-row" style="margin-top:6px"><button class="btn secondary" onclick="actMoveToDiscardPhase()" ${ui.busy?'disabled':''}>Skip melding → discard</button></div>
+          </div>`;
+      } else {
+        actionBar = `
+          <button class="btn" onclick="actAddMeldNow()" ${ui.selected.size===0||ui.busy?'disabled':''}>Lay selected as meld</button>
+          <button class="btn secondary" onclick="actMoveToDiscardPhase()" ${ui.busy?'disabled':''}>Skip melding → discard</button>
+        `;
+      }
+    } else {
+      const stagedVal = ui.stagedGroups.flat().reduce((sum,id)=>{const c=myHand.find(x=>x.id===id); return sum+(c?cardPointValue(c):0);},0);
+      actionBar = `
+        <div style="width:100%">
+          <div class="footnote">Initial meld needed this hand: ${s.threshold} pts. Stage melds, then confirm all at once — or skip melding entirely this turn.</div>
+          <div class="stage-panel">
+            <div class="stg-row">Staged value: ${stagedVal}/${s.threshold} ${ui.stagedGroups.map((g,i)=>`<span class="pill-small">group ${i+1} (${g.length}) <a href="#" onclick="removeStagedGroup(${i});return false;" style="color:#ffb;">×</a></span>`).join(' ')}</div>
+            <div class="stg-row">
+              <button class="btn small secondary" onclick="addStagedGroup()" ${ui.selected.size===0?'disabled':''}>Stage selected cards</button>
+              <button class="btn small" onclick="actConfirmInitial()" ${ui.busy?'disabled':''}>Confirm initial meld</button>
+              <button class="btn small secondary" onclick="actMoveToDiscardPhase()" ${ui.busy?'disabled':''}>Skip melding → discard</button>
+            </div>
+          </div>
+        </div>`;
+    }
+  } else if(s.turnPhase==='discard'){
+    /* Name the player who picks up next. Same anchored ordering as the opponent row: whatever
+       you discard is offered to the player immediately after you, so this is the moment where
+       forgetting who that is actually costs you the hand. */
+    const discardTo = nextPid ? nameOf(s, nextPid) : null;
+    actionBar = `
+      <div class="footnote">Choose 1 card to discard to end your turn.${discardTo?` <span class="discard-to">${esc(discardTo)} picks up next.</span>`:''} ${myHand.length===0?'(No cards — turn will just end.)':''}</div>
+      <button class="btn" onclick="actDiscard()" ${!ui.discardChoice||ui.busy?'disabled':''}>Discard selected</button>
+      <button class="btn secondary" onclick="actUndoToMeld()" ${ui.busy?'disabled':''}>Undo → back to melding</button>
+      ${myHand.length===0?`<button class="btn secondary" onclick="actMoveToDiscardPhase()">End turn</button>`:''}
+    `;
+  }
+
+  const stagedIds = new Set([...ui.stagedGroups.flat(), ...ui.pickupExtra.flat(), ...ui.pickupNaturals]);
+
+  return `
+  <div class="topbar">
+    <div class="grp">
+      <span class="display" style="font-size:1.2rem;color:var(--brass-bright)">Hand ${s.round}/4</span>
+      <span class="pill-small">Lay-down min ${s.threshold}</span>
+      <span class="turn-pill ${activePid===me.id?'you':'other'}">${activePid===me.id?'Your turn':esc(nameOf(s,activePid))+"'s turn"}</span>
+      ${s.turnStartedAt?`<span class="pill-small mono">⏱ ${formatElapsed(Date.now()-s.turnStartedAt)}</span>`:''}
+    </div>
+    <div class="grp mono" style="font-size:.85rem">
+      <span>Your total: ${myScore}${myRank?` (${ordinal(myRank)})`:''}</span>
+      <button class="btn small secondary" onclick="toggleScoreboard()">Scoreboard</button>
+      <span class="badge" style="padding:4px 10px">${esc(s.code)}</span>
+    </div>
+  </div>
+  <div class="table-body">
+    ${ui.error?`<div class="error-box">${esc(ui.error)}</div>`:''}
+    <div class="opp-row">${oppRow}</div>
+    <div class="mid-row">
+      <div class="pile-stack">
+        <div class="pile-label">Stock</div>
+        <div class="card-back card"></div>
+        <div class="pile-count">${s.drawPile.length} left</div>
+      </div>
+      <div class="pile-stack">
+        <div class="pile-label">Discard ${frozen?'(frozen)':''}</div>
+        ${top?renderCardEl(top,{big:true}):'<div class="card"> </div>'}
+        <div class="pile-count">${s.discardPile.length} in pile</div>
+      </div>
+      <div class="pile-stack">
+        <div class="pile-label">Your foot</div>
+        <div class="foot-pile-visual card">${FOOT_ICON_SVG}</div>
+        <div class="pile-count">${s.footOpen[me.id] ? 'opened' : ((s.feet[me.id]||[]).length+' cards')}</div>
+      </div>
+    </div>
+    <div class="red3-section">
+      <h3>♥ Red 3s</h3>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">${(s.redThrees[me.id]||[]).length ? (s.redThrees[me.id]||[]).map(renderRedThreeCard).join('') : '<span class="footnote">None banked yet this hand</span>'}</div>
+      <span class="red3-total">+${(s.redThrees[me.id]||[]).length*100} pts</span>
+    </div>
+    <div class="melds-board">
+      <div class="flex-between">
+        <h3 style="margin:0">Your melds</h3>
+        <div style="display:flex;gap:8px">
+          <button class="btn small secondary" onclick="sortMyMelds()">Sort ascending</button>
+          <button class="btn small ${ui.meldReorderMode?'':'secondary'}" onclick="toggleMeldReorderMode()">${ui.meldReorderMode?'Done reordering':'Reorder melds'}</button>
+        </div>
+      </div>
+      ${ui.meldReorderMode?`<div class="footnote">${ui.meldPickedRank?'Meld picked up — tap another to move it there, tap it again to cancel, or drop it at the end.':'Tap a meld to pick it up, then tap another to move it there. Only changes how melds look on your own screen.'}</div>`:''}
+      ${renderMeldsBoard(s, me.id, {mine:true})}
+    </div>
+    <div class="hand-area">
+      <div class="flex-between">
+        <h3 style="margin:0 0 8px">Your hand (${myHand.length})${isFloating(s, me.id)?'<span class="floating-badge">☁ Floating</span>':''}</h3>
+        <div style="display:flex;gap:8px">
+          <button class="btn small secondary" onclick="sortMyHand()">Sort ascending</button>
+          <button class="btn small ${ui.reorderMode?'':'secondary'}" onclick="toggleReorderMode()">${ui.reorderMode?'Done reordering':'Reorder cards'}</button>
+        </div>
+      </div>
+      ${ui.reorderMode?`<div class="footnote">${ui.pickedCardId?'Card picked up — tap another card to move it there, tap it again to cancel, or drop it at the end below.':'Tap a card to pick it up, then tap another card to move it there. Works any time, even when it is not your turn.'}</div>`:''}
+      ${!ui.reorderMode && ui.drawnThisTurnIds.size>0?`<div class="footnote">Cards with a red border were drawn this turn.</div>`:''}
+      <div class="hand-row">
+        ${myHand.map((c,cardIdx)=>{
+          let attr, selectedNow, disabled=false, interactable;
+          if(ui.reorderMode){
+            attr = `onclick="pickOrPlaceCard('${c.id}')"`;
+            selectedNow = ui.pickedCardId===c.id;
+            interactable = true;
+          } else {
+            const isPickupTarget = ui.pickupActive;
+            disabled = false;
+            if(isPickupTarget){
+              const pickupCommittedIds = new Set(ui.pickupExtra.flat());
+              if(ui.pickupNaturals.includes(c.id)){
+                attr = `onclick="confirmPickupNaturalPick('${c.id}')"`;
+                selectedNow = true;
+              } else if(pickupCommittedIds.has(c.id)){
+                attr = '';
+                selectedNow = true;
+                disabled = true;
+              } else if(ui.pickupNaturals.length < 2){
+                attr = `onclick="confirmPickupNaturalPick('${c.id}')"`;
+                selectedNow = false;
+              } else {
+                attr = `onclick="toggleSelect('${c.id}')"`;
+                selectedNow = ui.selected.has(c.id);
+              }
+            } else {
+              selectedNow = s.turnPhase==='discard' ? ui.discardChoice===c.id : ui.selected.has(c.id) || stagedIds.has(c.id);
+              disabled = stagedIds.has(c.id) && !ui.selected.has(c.id);
+              if(activePid!==me.id){ attr = ''; }
+              else if(s.turnPhase==='discard'){ attr = `onclick="pickDiscard('${c.id}')"`; }
+              else if(s.turnPhase==='meld'){ attr = disabled? '' : `onclick="toggleSelect('${c.id}')"`; }
+              else { attr=''; }
+            }
+            interactable = activePid===me.id && !(s.turnPhase==='draw' && s.pendingSecondDraw);
+          }
+          return renderCardEl(c, {clickable: interactable && !disabled, selected: selectedNow, newDraw: ui.drawnThisTurnIds.has(c.id), dealDelayMs: dealDelayForIndex(cardIdx), onClickAttr: attr});
+        }).join('')}
+        ${ui.reorderMode && ui.pickedCardId ? `<div class="card clickable" style="border:2px dashed var(--brass);background:transparent;color:var(--brass-bright);font-size:.7rem" onclick="dropPickedAtEnd()">Drop<br>at end</div>` : ''}
+      </div>
+    </div>
+    <div class="panel">
+      <h3 style="margin-top:0;font-size:.9rem">Table log</h3>
+      <div class="log-box" id="logBox">${(s.log||[]).slice(-16).reverse().map(l=>`<div>${esc(l)}</div>`).join('')}</div>
+    </div>
+  </div>
+  <div class="action-bar">${actionBar}</div>
+  ${s.phase==='roundEnd' ? renderRoundEndModal() : ''}
+  ${s.phase==='gameOver' ? renderGameOverModal() : ''}
+  ${renderScoreboardModal(s)}
+  ${renderDrawOverlay()}
+  ${renderRedThreeOverlay()}
+  ${renderDealBanner(s)}
+  `;
+}
+
+function ordinal(n){
+  const suf=['th','st','nd','rd'], v=n%100;
+  return n + (suf[(v-20)%10] || suf[v] || suf[0]);
+}
+function formatElapsed(ms){
+  const totalSec = Math.max(0, Math.floor(ms/1000));
+  const m = Math.floor(totalSec/60);
+  const sec = totalSec%60;
+  return `${m}:${sec<10?'0':''}${sec}`;
+}
+function computeRankings(s){
+  const rows = s.turnOrder.map(pid=>{
+    const rounds = s.scores[pid]||[null,null,null,null];
+    const total = rounds.filter(v=>v!=null).reduce((a,b)=>a+b,0);
+    return {pid, rounds, total};
+  });
+  rows.sort((a,b)=>b.total-a.total);
+  let rank=0, prevTotal=null;
+  rows.forEach((r,i)=>{
+    if(r.total!==prevTotal){ rank=i+1; prevTotal=r.total; }
+    r.rank = rank;
+  });
+  return rows;
+}
+function renderBreakdownTable(s, bd){
+  return `<table class="score-table">
+    <tr><th>Player</th><th>Melds</th><th>Canasta bonus</th><th>Red 3s</th><th>Hand −</th><th>Foot −</th><th>Round total</th></tr>
+    ${s.turnOrder.map(pid=>{
+      const b = (bd||{})[pid] || {meldValue:0,canastaBonus:0,redThreeCount:0,redThreeBonus:0,handPenalty:0,footPenalty:0,total:0};
+      return `<tr><td>${esc(nameOf(s,pid))}${pid===me.id?' (you)':''}</td><td>${b.meldValue}</td><td>${b.canastaBonus}</td><td>${b.redThreeCount}× (${b.redThreeBonus})</td><td>−${b.handPenalty}</td><td>−${b.footPenalty}</td><td><b>${b.total}</b></td></tr>`;
+    }).join('')}
+  </table>`;
+}
+function renderRoundEndModal(){
+  const s = netState;
+  const isHost = s.hostId===me.id;
+  const bd = (s.roundBreakdowns||{})[s.round] || {};
+  return `<div class="modal-bg"><div class="modal">
+    <h2 style="margin-top:0;color:var(--brass-bright)">Hand ${s.round} complete</h2>
+    <p>${esc(nameOf(s,s.wentOutPlayer))} went out.</p>
+    <table class="score-table">
+      <tr><th>Player</th>${[1,2,3,4].map(r=>`<th>H${r}</th>`).join('')}<th>Total</th></tr>
+      ${s.turnOrder.map(pid=>{
+        const rounds = s.scores[pid]||[null,null,null,null];
+        const total = rounds.filter(v=>v!=null).reduce((a,b)=>a+b,0);
+        return `<tr><td>${esc(nameOf(s,pid))}${pid===me.id?' (you)':''}</td>${rounds.map(v=>`<td>${v==null?'—':v}</td>`).join('')}<td><b>${total}</b></td></tr>`;
+      }).join('')}
+    </table>
+    <h3 style="font-size:.9rem;color:var(--brass-bright);margin-bottom:6px">This hand's breakdown</h3>
+    ${renderBreakdownTable(s, bd)}
+    <p class="footnote">Round total = melds + canasta bonus + (red 3s × 100) − cards left in hand − cards left in foot.</p>
+    ${isHost
+      ? `<button class="btn" onclick="actContinueRound()" ${ui.busy?'disabled':''}>${s.round>=4?'See final results':'Deal hand '+(s.round+1)}</button>`
+      : `<p class="footnote">Waiting for the host to continue…</p>`}
+  </div></div>`;
+}
+
+function renderGameOverModal(){
+  const s = netState;
+  const isHost = s.hostId===me.id;
+  const totals = s.turnOrder.map(pid=>({pid, total:(s.scores[pid]||[]).filter(v=>v!=null).reduce((a,b)=>a+b,0)}));
+  totals.sort((a,b)=>b.total-a.total);
+  return `<div class="modal-bg"><div class="modal">
+    <h2 style="margin-top:0;color:var(--brass-bright)">Final standings</h2>
+    <table class="score-table">
+      <tr><th>Rank</th><th>Player</th><th>Total</th></tr>
+      ${totals.map((t,i)=>`<tr><td>${i+1}</td><td>${esc(nameOf(s,t.pid))}${t.pid===me.id?' (you)':''}${i===0?' 🏆':''}</td><td><b>${t.total}</b></td></tr>`).join('')}
+    </table>
+    ${isHost?`<button class="btn" onclick="actNewGame()" ${ui.busy?'disabled':''}>Start a new game</button>`:`<p class="footnote">Waiting for the host to start a new game…</p>`}
+  </div></div>`;
+}
+function renderScoreboardModal(s){
+  if(!ui.scoreboardOpen) return '';
+  const rankings = computeRankings(s);
+  const completedHands = Object.keys(s.roundBreakdowns||{}).map(Number).sort((a,b)=>a-b);
+  const bd = ui.scoreboardHandView!=null ? (s.roundBreakdowns||{})[ui.scoreboardHandView] : null;
+  return `<div class="modal-bg" onclick="if(event.target===this) toggleScoreboard()"><div class="modal">
+    <div class="flex-between">
+      <h2 style="margin:0;color:var(--brass-bright)">Scoreboard</h2>
+      <button class="btn small secondary" onclick="toggleScoreboard()">Close</button>
+    </div>
+    <table class="score-table" style="margin-top:12px">
+      <tr><th>Rank</th><th>Player</th>${[1,2,3,4].map(r=>`<th>H${r}</th>`).join('')}<th>Total</th></tr>
+      ${rankings.map(r=>`<tr><td>${ordinal(r.rank)}</td><td>${esc(nameOf(s,r.pid))}${r.pid===me.id?' (you)':''}</td>${r.rounds.map(v=>`<td>${v==null?'—':v}</td>`).join('')}<td><b>${r.total}</b></td></tr>`).join('')}
+    </table>
+    ${completedHands.length?`
+      <h3 style="font-size:.85rem;color:var(--brass-bright);margin:14px 0 6px">View a hand's breakdown</h3>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+        ${completedHands.map(n=>`<button class="btn small ${ui.scoreboardHandView===n?'':'secondary'}" onclick="viewHandBreakdown(${n})">Hand ${n}</button>`).join('')}
+      </div>
+      ${bd?renderBreakdownTable(s, bd):''}
+    `:'<p class="footnote">No hands completed yet — breakdowns will show up here once the first one finishes.</p>'}
+  </div></div>`;
+}
+
+function render(){
+  const app = document.getElementById('app');
+  if(!netState){
+    ui.screen='landing';
+    app.innerHTML = renderLanding();
+    return;
+  }
+  checkForDealTransition(netState);
+  checkForTurnStartChime(netState);
+  checkForRedThreeChime(netState);
+  if(netState.phase==='lobby'){ app.innerHTML = renderLobby(); return; }
+
+  // This app replaces #app's entire innerHTML on every render — including the once-a-second
+  // timer tick and the ~1.8s poll, not just user actions — which would otherwise reset the
+  // table log's scroll position back to the top constantly. Capture it before the rebuild and
+  // restore it after, so scrolling through log history actually stays put.
+  const prevLogBox = document.getElementById('logBox');
+  const prevScrollTop = prevLogBox ? prevLogBox.scrollTop : 0;
+
+  app.innerHTML = renderTable();
+
+  const newLogBox = document.getElementById('logBox');
+  if(newLogBox) newLogBox.scrollTop = prevScrollTop;
+}
+
+render();
+initBackend();
+setInterval(()=>{ if(netState && netState.phase==='playing'){ render(); } }, 1000);
+</script>
+</body>
+</html>

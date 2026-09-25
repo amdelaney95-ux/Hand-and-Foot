@@ -1,0 +1,15 @@
+{
+  "rules": {
+    "hfRooms": {
+      "$code": {
+        ".read": "auth != null",
+        ".write": "auth != null && $code.matches(/^[A-Z]{4}$/)",
+        ".validate": "newData.hasChildren(['json', 'rev'])",
+        "json": { ".validate": "newData.isString() && newData.val().length < 1000000" },
+        "rev": { ".validate": "newData.isNumber()" },
+        "updatedAt": { ".validate": "newData.isNumber()" },
+        "$other": { ".validate": false }
+      }
+    }
+  }
+}

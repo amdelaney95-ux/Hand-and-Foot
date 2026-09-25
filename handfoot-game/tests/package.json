@@ -1,0 +1,8 @@
+{
+  "name": "handfoot-tests",
+  "private": true,
+  "description": "Only needed for test_e2e_sync.js (jsdom). Every other test runs on plain Node.",
+  "devDependencies": {
+    "jsdom": "24.1.3"
+  }
+}
